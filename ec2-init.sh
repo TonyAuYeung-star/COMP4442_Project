@@ -4,7 +4,7 @@
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 echo "开始初始化 EC2 服务器..."
-
+    
 # 2. 更新 Ubuntu 系统的软件源
 apt-get update -y
 
