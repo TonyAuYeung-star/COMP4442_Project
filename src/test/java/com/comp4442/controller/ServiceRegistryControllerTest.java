@@ -48,6 +48,7 @@ public class ServiceRegistryControllerTest {
             """, serviceName);
 
         mockMvc.perform(post("/api/v1/services")
+                .contextPath("/api")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(request))
             .andExpect(status().isCreated())
@@ -59,6 +60,7 @@ public class ServiceRegistryControllerTest {
     @Test
     public void testGetAllServices_Success() throws Exception {
         mockMvc.perform(get("/api/v1/services")
+                .contextPath("/api")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(200))
@@ -68,6 +70,7 @@ public class ServiceRegistryControllerTest {
     @Test
     public void testGetServiceById_NotFound() throws Exception {
         mockMvc.perform(get("/api/v1/services/999")
+                .contextPath("/api")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
     }
@@ -75,6 +78,7 @@ public class ServiceRegistryControllerTest {
     @Test
     public void testGetHealth_Success() throws Exception {
         mockMvc.perform(get("/api/v1/health")
+                .contextPath("/api")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(200))
@@ -84,6 +88,7 @@ public class ServiceRegistryControllerTest {
     @Test
     public void testGetInfo_Success() throws Exception {
         mockMvc.perform(get("/api/v1/info")
+                .contextPath("/api")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(200))
