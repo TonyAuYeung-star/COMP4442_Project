@@ -1,0 +1,68 @@
+# Comprehensive .gitignore for Java/Maven/Spring Boot project
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build & Dependencies
+target/
+dist/
+build/
+.gradle/
+*.jar
+*.war
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+pom.xml.lock
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# Credentials & Secrets
+*.csv
+*.key
+*.pem
+.env
+.env.local
+.env.*.local
+credentials.json
+secrets.yml
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Application
+out/
+bin/
+.classpath
+.project
+.settings/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+h2.mv.db
+
+# Docker
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project specific
+*.orig
+.gradle/
