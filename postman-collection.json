@@ -1,0 +1,275 @@
+{
+  "info": {
+    "name": "COMP4442 Backend API",
+    "description": "Spring Boot Microservice Registry API - JSON Request Bodies",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "health"]
+            }
+          }
+        },
+        {
+          "name": "Application Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "info"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service Registry",
+      "item": [
+        {
+          "name": "Register Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"auth-service\",\n  \"host\": \"auth.example.com\",\n  \"port\": 8081,\n  \"description\": \"Authentication microservice\",\n  \"healthCheckUrl\": \"/health\",\n  \"version\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services"]
+            }
+          }
+        },
+        {
+          "name": "Get All Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services"]
+            }
+          }
+        },
+        {
+          "name": "Get Service by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/services/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services", "1"]
+            }
+          }
+        },
+        {
+          "name": "Query Service by Name (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"auth-service\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/services/query/by-name",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services", "query", "by-name"]
+            }
+          }
+        },
+        {
+          "name": "Query Services by Status (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/services/query/by-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services", "query", "by-status"]
+            }
+          }
+        },
+        {
+          "name": "Update Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"port\": 8082,\n  \"status\": \"MAINTENANCE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/services/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Service",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/services/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "services", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service Instances",
+      "item": [
+        {
+          "name": "Query Active Instances (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances/query/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances", "query", "active"]
+            }
+          }
+        },
+        {
+          "name": "Query Instance Count (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances/query/count",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances", "query", "count"]
+            }
+          }
+        },
+        {
+          "name": "Get Instance by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances", "1"]
+            }
+          }
+        },
+        {
+          "name": "Register Instance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": {\"id\": 1},\n  \"instanceId\": \"instance-1\",\n  \"hostname\": \"auth-1.example.com\",\n  \"port\": 8081\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances"]
+            }
+          }
+        },
+        {
+          "name": "Update Heartbeat",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances/1/heartbeat",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances", "1", "heartbeat"]
+            }
+          }
+        },
+        {
+          "name": "Unregister Instance",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/service-instances/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "service-instances", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    }
+  ]
+}
