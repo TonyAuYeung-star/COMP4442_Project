@@ -1,6 +1,6 @@
 # COMP4442 Frontend (React + Vite)
 
-React frontend for your Spring Boot backend in `D:/compccProj`.
+React frontend for your Spring Boot backend
 
 ## Features
 
@@ -9,34 +9,21 @@ React frontend for your Spring Boot backend in `D:/compccProj`.
   - Create, list, update, delete services
   - Query services by name and status
   - Visual service cards with status indicators
-- **Service Instance Management**:
-  - Register new service instances
-  - Query active instances and counts
-  - Get detailed instance information
-  - Update heartbeats and unregister instances
-  - Health status monitoring based on heartbeat times
-
+  
 ## Architecture
 
 The frontend is built with modern React components:
 
 - **Header**: Application header with refresh functionality
 - **Notification**: User feedback messages with dismiss option
-- **DashboardStats**: Overview cards showing health, services, and instances
 - **ServiceCard**: Individual service display with actions
 - **ServiceForm**: Form for creating/editing services
 - **ServiceQuery**: Query interface for finding services
-- **InstanceCard**: Individual instance display with actions
-- **InstanceForm**: Form for registering instances
-- **ConfirmationDialog**: Confirmation prompts for destructive actions
 
 ## Backend API
 
 Expects Spring Boot backend running on `http://localhost:8080/api` with endpoints:
 
-### Health & Info
-- `GET /v1/health` - Application health status
-- `GET /v1/info` - Application information
 
 ### Services
 - `GET /v1/services` - List all services
@@ -47,13 +34,7 @@ Expects Spring Boot backend running on `http://localhost:8080/api` with endpoint
 - `POST /v1/services/query/by-name` - Query by name
 - `POST /v1/services/query/by-status` - Query by status
 
-### Service Instances
-- `POST /v1/service-instances` - Register instance
-- `POST /v1/service-instances/query/active` - Get active instances
-- `POST /v1/service-instances/query/count` - Get instance count
-- `GET /v1/service-instances/{id}` - Get instance by ID
-- `PUT /v1/service-instances/{id}/heartbeat` - Update heartbeat
-- `DELETE /v1/service-instances/{id}` - Unregister instance
+
 
 ## Getting Started
 
