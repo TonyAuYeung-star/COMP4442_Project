@@ -67,13 +67,15 @@ Thumbs.db
 *.orig
 .gradle/
 
-# Frontend (Vite/Node)
-compcc-frontend/node_modules/
-compcc-frontend/dist/
-compcc-frontend/.vite/
-compcc-frontend/.env
-compcc-frontend/.env.local
-compcc-frontend/.env.*.local
-
-# Ignore archived/development copy
-true_development/
+# Frontend local/build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/coverage/
+frontend/.cache/
+frontend/.eslintcache
+frontend/*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local

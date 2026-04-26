@@ -44,9 +44,9 @@ public class HealthCheckController {
         log.info("Info requested");
 
         Map<String, Object> data = new HashMap<>();
-        data.put("applicationName", "COMP4442 Service Computing Backend");
+        data.put("applicationName", "COMP4442 Hotel Room Booking System");
         data.put("version", "1.0.0");
-        data.put("description", "Microservice Registry on AWS EC2");
+        data.put("description", "Hotel Room Booking System on AWS EC2");
         data.put("environment", System.getenv("ENVIRONMENT") != null ? 
             System.getenv("ENVIRONMENT") : "development");
         data.put("javaVersion", System.getProperty("java.version"));

@@ -1,0 +1,170 @@
+package com.comp4442.service;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.comp4442.exception.ResourceNotFoundException;
+import com.comp4442.exception.RoomNotAvailableException;
+import com.comp4442.exception.UnauthorizedException;
+import com.comp4442.model.dto.BookingCreateRequest;
+import com.comp4442.model.dto.BookingDTO;
+import com.comp4442.model.entity.Booking;
+import com.comp4442.model.entity.BookingStatus;
+import com.comp4442.model.entity.Room;
+import com.comp4442.model.entity.User;
+import com.comp4442.repository.BookingRepository;
+import com.comp4442.repository.RoomRepository;
+import com.comp4442.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Booking Service - handles booking creation, cancellation, and history
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class BookingService {
+
+    private final BookingRepository bookingRepository;
+    private final RoomRepository roomRepository;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public synchronized BookingDTO createBooking(Long userId, BookingCreateRequest request) {
+        log.info("Creating booking for user {} and room {}", userId, request.getRoomId());
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Room room = roomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
+
+        if (!room.getIsAvailable()) {
+            throw new RoomNotAvailableException("Room is not available for booking");
+        }
+
+        // Check for conflicting bookings - critical synchronized + transactional logic
+        int conflicts = bookingRepository.countConflicting(
+                request.getRoomId(), request.getCheckIn(), request.getCheckOut());
+
+        if (conflicts > 0) {
+            throw new RoomNotAvailableException("Room is already booked for the selected dates");
+        }
+
+        // Calculate total price
+        long nights = ChronoUnit.DAYS.between(request.getCheckIn(), request.getCheckOut());
+        BigDecimal totalPrice = room.getPricePerNight().multiply(BigDecimal.valueOf(nights));
+
+        Booking booking = Booking.builder()
+                .user(user)
+                .room(room)
+                .checkIn(request.getCheckIn())
+                .checkOut(request.getCheckOut())
+                .totalPrice(totalPrice)
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        Booking saved = bookingRepository.save(booking);
+        log.info("Booking created successfully: {}", saved.getId());
+
+        return convertToDTO(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingDTO> getUserBookingHistory(Long userId) {
+        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingDTO> getAllBookings() {
+        return bookingRepository.findAllActiveBookings()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public BookingDTO cancelBooking(Long userId, Long bookingId) {
+        log.info("Cancelling booking {} by user {}", bookingId, userId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only cancel your own bookings");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalArgumentException("Booking is already cancelled");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking saved = bookingRepository.save(booking);
+        log.info("Booking cancelled successfully: {}", saved.getId());
+
+        return convertToDTO(saved);
+    }
+
+    @Transactional
+    public BookingDTO adminCancelBooking(Long bookingId) {
+        log.info("Admin cancelling booking {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalArgumentException("Booking is already cancelled");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking saved = bookingRepository.save(booking);
+        log.info("Admin cancelled booking successfully: {}", saved.getId());
+
+        return convertToDTO(saved);
+    }
+
+    @Transactional
+    public BookingDTO adminUpdateBooking(Long bookingId, LocalDate checkIn, LocalDate checkOut, BigDecimal totalPrice) {
+        log.info("Admin updating booking {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (checkIn != null) booking.setCheckIn(checkIn);
+        if (checkOut != null) booking.setCheckOut(checkOut);
+        if (totalPrice != null) booking.setTotalPrice(totalPrice);
+        
+        booking.setUpdatedAt(java.time.LocalDateTime.now());
+        Booking saved = bookingRepository.save(booking);
+        log.info("Admin updated booking successfully: {}", saved.getId());
+
+        return convertToDTO(saved);
+    }
+
+    private BookingDTO convertToDTO(Booking booking) {
+        return BookingDTO.builder()
+                .id(booking.getId())
+                .userId(booking.getUser().getId())
+                .username(booking.getUser().getUsername())
+                .roomId(booking.getRoom().getId())
+                .roomName(booking.getRoom().getName())
+                .checkIn(booking.getCheckIn())
+                .checkOut(booking.getCheckOut())
+                .totalPrice(booking.getTotalPrice())
+                .status(booking.getStatus())
+                .createdAt(booking.getCreatedAt())
+                .updatedAt(booking.getUpdatedAt())
+                .build();
+    }
+}
