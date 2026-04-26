@@ -66,3 +66,16 @@ Thumbs.db
 # Project specific
 *.orig
 .gradle/
+
+# Frontend local/build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/coverage/
+frontend/.cache/
+frontend/.eslintcache
+frontend/*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
