@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Booking Entity - represents a hotel room booking
@@ -48,5 +49,17 @@ public class Booking extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private BookingStatus status = BookingStatus.PENDING;
+    private BookingStatus status = BookingStatus.PENDING_PAYMENT;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    @Column(name = "pay_later_count", nullable = false)
+    @Builder.Default
+    private Integer payLaterCount = 0;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_source")
+    @Builder.Default
+    private CancellationSource cancellationSource = CancellationSource.NONE;
 }

@@ -1,6 +1,7 @@
 package com.comp4442.model.dto;
 
 import com.comp4442.model.entity.BookingStatus;
+import com.comp4442.model.entity.CancellationSource;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +34,9 @@ public class BookingDTO implements Serializable {
     private LocalDate checkOut;
     private BigDecimal totalPrice;
     private BookingStatus status;
+    private CancellationSource cancellationSource;
+    private LocalDateTime expiresAt;
+    private Integer payLaterCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

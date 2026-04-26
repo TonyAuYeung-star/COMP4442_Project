@@ -4,8 +4,8 @@
 
 A production-ready **Spring Boot microservice** implementing a **Service Registry** for service discovery and management, deployed on **AWS EC2** with Docker containerization.
 
-**Course:** COMP4442 - Service Computing  
-**Team Role:** Backend Development  
+**Course:** COMP4442 - Service Computing
+**Team Role:** Backend Development
 **Deployment Platform:** AWS EC2, EBS, Docker
 
 ---
@@ -433,7 +433,7 @@ This project is for educational purposes as part of COMP4442 at PolyU.
 
 ## 👤 Author
 
-**Tony**  
+**Tony**
 COMP4442 Semester Project - Backend Development
 
 ---

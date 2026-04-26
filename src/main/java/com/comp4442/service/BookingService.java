@@ -2,6 +2,7 @@ package com.comp4442.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,8 +15,10 @@ import com.comp4442.exception.RoomNotAvailableException;
 import com.comp4442.exception.UnauthorizedException;
 import com.comp4442.model.dto.BookingCreateRequest;
 import com.comp4442.model.dto.BookingDTO;
+import com.comp4442.model.dto.BookingOverviewDTO;
 import com.comp4442.model.entity.Booking;
 import com.comp4442.model.entity.BookingStatus;
+import com.comp4442.model.entity.CancellationSource;
 import com.comp4442.model.entity.Room;
 import com.comp4442.model.entity.User;
 import com.comp4442.repository.BookingRepository;
@@ -32,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class BookingService {
+    private static final int MAX_PAY_LATER_ATTEMPTS = 3;
 
     private final BookingRepository bookingRepository;
     private final RoomRepository roomRepository;
@@ -69,7 +73,9 @@ public class BookingService {
                 .checkIn(request.getCheckIn())
                 .checkOut(request.getCheckOut())
                 .totalPrice(totalPrice)
-                .status(BookingStatus.CONFIRMED)
+                .status(BookingStatus.PENDING_PAYMENT)
+                .expiresAt(LocalDateTime.now().plusMinutes(1))
+                .payLaterCount(0)
                 .build();
 
         Booking saved = bookingRepository.save(booking);
@@ -78,17 +84,19 @@ public class BookingService {
         return convertToDTO(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<BookingDTO> getUserBookingHistory(Long userId) {
+        expirePendingPaymentBookings();
         return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<BookingDTO> getAllBookings() {
-        return bookingRepository.findAllActiveBookings()
+        expirePendingPaymentBookings();
+        return bookingRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -110,9 +118,42 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationSource(CancellationSource.USER);
         Booking saved = bookingRepository.save(booking);
         log.info("Booking cancelled successfully: {}", saved.getId());
 
+        return convertToDTO(saved);
+    }
+
+    @Transactional
+    public BookingDTO payLater(Long userId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("You can only update your own bookings");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new IllegalArgumentException("Only pending payment bookings can be marked as pay later");
+        }
+        int currentPayLaterCount = booking.getPayLaterCount() == null ? 0 : booking.getPayLaterCount();
+        if (currentPayLaterCount >= MAX_PAY_LATER_ATTEMPTS) {
+            throw new IllegalArgumentException("Pay later limit reached (maximum 3 times). Please complete payment now.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (booking.getExpiresAt() != null && !booking.getExpiresAt().isAfter(now)) {
+            booking.setStatus(BookingStatus.EXPIRED);
+            booking.setExpiresAt(null);
+            booking.setUpdatedAt(now);
+            bookingRepository.save(booking);
+            throw new IllegalArgumentException("Booking payment window has already expired");
+        }
+
+        booking.setPayLaterCount(currentPayLaterCount + 1);
+        booking.setExpiresAt(now.plusMinutes(1));
+        booking.setUpdatedAt(now);
+        Booking saved = bookingRepository.save(booking);
         return convertToDTO(saved);
     }
 
@@ -128,6 +169,7 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationSource(CancellationSource.ADMINISTRATOR);
         Booking saved = bookingRepository.save(booking);
         log.info("Admin cancelled booking successfully: {}", saved.getId());
 
@@ -163,8 +205,40 @@ public class BookingService {
                 .checkOut(booking.getCheckOut())
                 .totalPrice(booking.getTotalPrice())
                 .status(booking.getStatus())
+                .cancellationSource(booking.getCancellationSource())
+                .expiresAt(booking.getExpiresAt())
+                .payLaterCount(booking.getPayLaterCount() == null ? 0 : booking.getPayLaterCount())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
+                .build();
+    }
+
+    @Transactional
+    protected void expirePendingPaymentBookings() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> expired = bookingRepository.findByStatusAndExpiresAtBefore(BookingStatus.PENDING_PAYMENT, now);
+        if (expired.isEmpty()) {
+            return;
+        }
+        for (Booking booking : expired) {
+            booking.setStatus(BookingStatus.EXPIRED);
+            booking.setExpiresAt(null);
+            booking.setUpdatedAt(now);
+        }
+        bookingRepository.saveAll(expired);
+    }
+
+    @Transactional
+    public BookingOverviewDTO getSystemBookingOverview() {
+        expirePendingPaymentBookings();
+        long confirmedBookingCount = bookingRepository.countByStatus(BookingStatus.CONFIRMED);
+        long pendingBookingCount = bookingRepository.countByStatus(BookingStatus.PENDING_PAYMENT);
+        BigDecimal confirmedRevenue = bookingRepository.sumTotalPriceByConfirmedStatus();
+
+        return BookingOverviewDTO.builder()
+                .confirmedBookingCount(confirmedBookingCount)
+                .pendingBookingCount(pendingBookingCount)
+                .confirmedRevenue(confirmedRevenue)
                 .build();
     }
 }

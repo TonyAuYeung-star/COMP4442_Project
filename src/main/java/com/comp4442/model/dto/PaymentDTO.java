@@ -25,7 +25,7 @@ public class PaymentDTO implements Serializable {
 
     private Long id;
     private Long bookingId;
-    private String stripeIntentId;
+    private String paymentReferenceId;
     private BigDecimal amount;
     private PaymentStatus status;
     private LocalDateTime createdAt;

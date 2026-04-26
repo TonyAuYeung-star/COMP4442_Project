@@ -31,11 +31,14 @@ public class Payment extends BaseEntity {
     @JoinColumn(name = "booking_id", nullable = false, unique = true)
     private Booking booking;
 
-    @Column(name = "stripe_intent_id")
-    private String stripeIntentId;
+    @Column(name = "payment_reference_id")
+    private String paymentReferenceId;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "failure_reason")
+    private String failureReason;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -38,6 +38,14 @@ public class RoomService {
     }
 
     @Transactional(readOnly = true)
+    public List<RoomDTO> getAllRooms() {
+        return roomRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public RoomDTO getRoomById(Long id) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Room not found with ID: " + id));
@@ -145,6 +153,11 @@ public class RoomService {
         long activeBookings = bookingRepository.countByRoomIdAndStatusNotCancelled(id);
         if (activeBookings > 0) {
             throw new RuntimeException("Cannot delete room with active bookings");
+        }
+
+        long totalLinkedBookings = bookingRepository.countByRoomId(id);
+        if (totalLinkedBookings > 0) {
+            throw new RuntimeException("Cannot delete room with booking records. Mark it as unavailable instead.");
         }
 
         roomRepository.deleteById(id);

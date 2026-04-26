@@ -3,6 +3,7 @@ package com.comp4442.controller;
 import com.comp4442.model.dto.ApiResponse;
 import com.comp4442.model.dto.BookingCreateRequest;
 import com.comp4442.model.dto.BookingDTO;
+import com.comp4442.model.dto.BookingOverviewDTO;
 import com.comp4442.service.BookingService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,16 @@ public class BookingController {
     }
 
     /**
+     * Get system-wide booking overview for home dashboard cards
+     * GET /api/v1/bookings/overview
+     */
+    @GetMapping("/overview")
+    public ResponseEntity<ApiResponse<BookingOverviewDTO>> getOverview() {
+        BookingOverviewDTO overview = bookingService.getSystemBookingOverview();
+        return ResponseEntity.ok(ApiResponse.success("Booking overview retrieved", overview));
+    }
+
+    /**
      * Cancel a booking
      * POST /api/v1/bookings/{id}/cancel
      */
@@ -74,6 +85,26 @@ public class BookingController {
         try {
             BookingDTO result = bookingService.cancelBooking(userId, id);
             return ResponseEntity.ok(ApiResponse.success("Booking cancelled successfully", result));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * Mark booking as pay later and refresh expiry countdown
+     * PUT /api/v1/bookings/{id}/pay-later
+     */
+    @PutMapping("/{id}/pay-later")
+    public ResponseEntity<ApiResponse<BookingDTO>> payLater(
+            @PathVariable Long id,
+            HttpServletRequest httpRequest) {
+        Long userId = (Long) httpRequest.getAttribute("userId");
+        log.info("Pay later for booking {} by user {}", id, userId);
+
+        try {
+            BookingDTO result = bookingService.payLater(userId, id);
+            return ResponseEntity.ok(ApiResponse.success("Booking marked as pay later", result));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(400, e.getMessage()));
