@@ -66,3 +66,14 @@ Thumbs.db
 # Project specific
 *.orig
 .gradle/
+
+# Frontend (Vite/Node)
+compcc-frontend/node_modules/
+compcc-frontend/dist/
+compcc-frontend/.vite/
+compcc-frontend/.env
+compcc-frontend/.env.local
+compcc-frontend/.env.*.local
+
+# Ignore archived/development copy
+true_development/
