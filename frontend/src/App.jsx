@@ -66,6 +66,13 @@ function isValidDateRange(checkIn, checkOut) {
   return new Date(checkOut) > new Date(checkIn)
 }
 
+function nextDay(dateStr) {
+  if (!dateStr) return undefined
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().split('T')[0]
+}
+
 function formatRemainingTime(expiresAt, nowMs) {
   if (!expiresAt) return null
   const remainingMs = new Date(expiresAt).getTime() - nowMs
@@ -709,7 +716,7 @@ function App() {
               </div>
             </div>
             <input type="date" value={roomSearch.checkIn} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkIn: e.target.value }))} />
-            <input type="date" min={roomSearch.checkIn || undefined} value={roomSearch.checkOut} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkOut: e.target.value }))} />
+            <input type="date" min={nextDay(roomSearch.checkIn)} value={roomSearch.checkOut} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkOut: e.target.value }))} />
             <div className="row-actions">
               <button type="submit" disabled={loading}>Search</button>
               <button type="button" className="ghost" onClick={resetSearchFilters}>Reset</button>
@@ -729,7 +736,7 @@ function App() {
               ))}
             </select>
             <input type="date" value={bookingDraft.checkIn} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkIn: e.target.value, checkOut: prev.checkOut && new Date(prev.checkOut) <= new Date(e.target.value) ? '' : prev.checkOut }))} required />
-            <input type="date" min={bookingDraft.checkIn || undefined} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkOut: e.target.value }))} required />
+            <input type="date" min={nextDay(bookingDraft.checkIn)} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkOut: e.target.value }))} required />
             <div className="row-actions">
               <button type="button" className="secondary" onClick={checkAvailability}>Check</button>
               <button type="submit">Book</button>
@@ -852,8 +859,18 @@ function App() {
               <h2>Admin Room Editor</h2>
               <form className="form-grid" onSubmit={submitAdminRoom}>
                 <input placeholder="Room Name" value={adminRoomForm.name} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, name: e.target.value }))} required />
-                <input placeholder="Type" value={adminRoomForm.type} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, type: e.target.value }))} required />
-                <input type="number" min="1" placeholder="Capacity" value={adminRoomForm.capacity} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, capacity: e.target.value }))} required />
+                <select value={adminRoomForm.type} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, type: e.target.value }))} required>
+                  <option value="">Select room type</option>
+                  {ROOM_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <select value={adminRoomForm.capacity} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, capacity: Number(e.target.value) }))} required>
+                  <option value="">Select capacity</option>
+                  {ROOM_CAPACITIES.map((capacity) => (
+                    <option key={capacity} value={capacity}>{capacity} guest{capacity > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
                 <input type="number" min="1" step="0.01" placeholder="Price" value={adminRoomForm.pricePerNight} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, pricePerNight: e.target.value }))} required />
                 <input placeholder="Image URL" value={adminRoomForm.imageUrl} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, imageUrl: e.target.value }))} />
                 <input placeholder="Amenities" value={adminRoomForm.amenities} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, amenities: e.target.value }))} />
