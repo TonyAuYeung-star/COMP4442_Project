@@ -625,6 +625,55 @@ function App() {
     }
   }
 
+  function editAdminRoom(room) {
+    setAdminRoomForm({
+      id: room.id,
+      name: room.name,
+      type: room.type,
+      capacity: room.capacity,
+      pricePerNight: room.pricePerNight,
+      amenities: room.amenities || '',
+      imageUrl: room.imageUrl || '',
+      isAvailable: room.isAvailable !== false,
+    })
+  }
+
+  function resetAdminRoomForm() {
+    setAdminRoomForm({
+      id: '',
+      name: '',
+      type: 'Standard',
+      capacity: 2,
+      pricePerNight: 100,
+      amenities: '',
+      imageUrl: '',
+      isAvailable: true,
+    })
+  }
+
+  async function updateRoomAvailability(room, isAvailable) {
+    if (!user?.token || !isAdmin) return
+    try {
+      await apiRequest(`/v1/admin/rooms/${room.id}`, {
+        method: 'PUT',
+        token: user.token,
+        body: {
+          name: room.name,
+          type: room.type,
+          capacity: Number(room.capacity),
+          pricePerNight: Number(room.pricePerNight),
+          amenities: room.amenities || '',
+          imageUrl: room.imageUrl || '',
+          isAvailable,
+        },
+      })
+      showBanner('ok', `Room marked as ${isAvailable ? 'available' : 'unavailable'}.`)
+      await loadAdminRooms()
+    } catch (error) {
+      showBanner('error', error.message)
+    }
+  }
+
   async function deleteRoom(id) {
     if (!user?.token || !isAdmin) return
     try {
@@ -880,20 +929,40 @@ function App() {
                 </label>
                 <div className="row-actions">
                   <button type="submit">{adminRoomForm.id ? 'Update Room' : 'Create Room'}</button>
-                  <button type="button" className="ghost" onClick={() => setAdminRoomForm({
-                    id: '',
-                    name: '',
-                    type: 'Standard',
-                    capacity: 2,
-                    pricePerNight: 100,
-                    amenities: '',
-                    imageUrl: '',
-                    isAvailable: true,
-                  })}>
+                  <button type="button" className="ghost" onClick={resetAdminRoomForm}>
                     Clear
                   </button>
                 </div>
               </form>
+
+              <h3>All Rooms</h3>
+              <div className="cards">
+                {rooms.map((room) => (
+                  <article className="room-admin-card" key={room.id}>
+                    <div>
+                      <h3>{room.name}</h3>
+                      <p>Type: {room.type} | Capacity: {room.capacity}</p>
+                      <p>Price: <strong>{toMoney(room.pricePerNight)}</strong></p>
+                      <p className={`room-status ${room.isAvailable === false ? 'off' : 'on'}`}>
+                        {room.isAvailable === false ? 'Unavailable' : 'Available'}
+                      </p>
+                    </div>
+                    <div className="inline-actions">
+                      <button type="button" className="ghost" onClick={() => editAdminRoom(room)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className={room.isAvailable === false ? 'secondary' : 'danger'}
+                        onClick={() => updateRoomAvailability(room, room.isAvailable === false)}
+                      >
+                        {room.isAvailable === false ? 'Set Available' : 'Set Unavailable'}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {!rooms.length && <p className="muted">No rooms found.</p>}
+              </div>
 
               <h3>All Bookings</h3>
               <div className="cards">

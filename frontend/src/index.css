@@ -368,6 +368,48 @@ select:focus {
   animation: rise 0.4s ease backwards;
 }
 
+.room-admin-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  padding: 0.75rem;
+}
+
+.room-admin-card h3 {
+  margin: 0.1rem 0 0.35rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 1rem;
+}
+
+.room-admin-card p {
+  margin: 0.2rem 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.room-status {
+  display: inline-block;
+  margin-top: 0.2rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.room-status.on {
+  background: var(--ok-bg);
+  color: #0f725f;
+}
+
+.room-status.off {
+  background: var(--error-bg);
+  color: #9b2f2f;
+}
+
 .booking-card,
 .session-card {
   grid-template-columns: 1fr;
@@ -563,5 +605,10 @@ select:focus {
 
   .room-card img {
     height: 170px;
+  }
+
+  .room-admin-card {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
