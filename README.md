@@ -1,81 +1,119 @@
-# COMP4442_Project - Spring Boot Microservice on AWS EC2
+# COMP4442_Project - Hotel Room Booking System
 
 ## 📋 Project Overview
 
-A production-ready **Spring Boot microservice** implementing a **Service Registry** for service discovery and management, deployed on **AWS EC2** with Docker containerization.
+A production-ready **Hotel Room Booking System** built with Spring Boot Backend and React Frontend, deployed on **AWS EC2**. This project implements complete service computing architecture including JWT authentication, booking management and payment processing.
 
-**Course:** COMP4442 - Service Computing  
-**Team Role:** Backend Development  
-**Deployment Platform:** AWS EC2, EBS, Docker
+**Course:** COMP4442 - Service Computing
+**Type:** Semester Group Project
+**Deployment Platform:** AWS EC2
 
 ---
 
 ## 🏗️ Architecture
 
-### Project Structure
+### Actual Project Structure
 ```
 COMP4442_Project/
-├── src/
+├── 📂 src/                            # BACKEND - Spring Boot
 │   ├── main/
 │   │   ├── java/com/comp4442/
-│   │   │   ├── controller/          # REST API endpoints
-│   │   │   ├── service/             # Business logic
-│   │   │   ├── repository/          # Data access layer
-│   │   │   ├── model/
-│   │   │   │   ├── entity/          # JPA entities
-│   │   │   │   └── dto/             # Data transfer objects
-│   │   │   ├── config/              # Spring configuration
-│   │   │   ├── exception/           # Error handling
-│   │   │   └── ServiceComputingApplication.java
+│   │   │   ├── ServiceComputingApplication.java
+│   │   │   ├── 📂 config/
+│   │   │   │   ├── ApplicationConfig.java
+│   │   │   │   ├── SecurityConfig.java
+│   │   │   │   ├── JwtUtil.java
+│   │   │   │   ├── JwtAuthenticationFilter.java
+│   │   │   │   └── DataLoader.java
+│   │   │   ├── 📂 controller/          # REST API Endpoints
+│   │   │   │   ├── AuthController.java
+│   │   │   │   ├── BookingController.java
+│   │   │   │   ├── RoomController.java
+│   │   │   │   ├── PaymentController.java
+│   │   │   │   ├── AdminController.java
+│   │   │   │   └── HealthCheckController.java
+│   │   │   ├── 📂 service/             # Business Logic Layer
+│   │   │   │   ├── AuthService.java
+│   │   │   │   ├── BookingService.java
+│   │   │   │   ├── RoomService.java
+│   │   │   │   └── PaymentService.java
+│   │   │   ├── 📂 repository/          # Data Access Layer
+│   │   │   │   ├── UserRepository.java
+│   │   │   │   ├── RoomRepository.java
+│   │   │   │   ├── BookingRepository.java
+│   │   │   │   ├── PaymentRepository.java
+│   │   │   │   └── UserRepository.java
+│   │   │   ├── 📂 model/
+│   │   │   │   ├── 📂 entity/          # Database Entities
+│   │   │   │   └── 📂 dto/             # Data Transfer Objects
+│   │   │   └── 📂 exception/           # Global Exception Handling
+│   │   │       ├── GlobalExceptionHandler.java
+│   │   │       ├── ResourceNotFoundException.java
+│   │   │       ├── RoomNotAvailableException.java
+│   │   │       └── UnauthorizedException.java
 │   │   └── resources/
-│   │       └── application.yml      # Configuration
-│   └── test/                        # Unit & Integration tests
-├── scripts/
-│   ├── deploy.sh                    # Deployment script
-│   └── start-dev.sh                 # Development starter
-├── Dockerfile                       # Multi-stage Docker build
-├── docker-compose.yml               # Local development setup
-├── pom.xml                          # Maven configuration
-└── README.md
+│   │       ├── application.properties
+│   │       ├── application.yml
+│   │       ├── application-dev.yml
+│   │       ├── application-prod.yml
+│   │       └── static/
+│   └── test/                            # Unit & Integration Tests
+│
+├── 📂 frontend/                        # FRONTEND - React
+│   ├── src/
+│   │   ├── main.jsx
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   ├── index.css
+│   │   └── assets/
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── package.json
+│   └── eslint.config.js
+│
+├── ec2-init.sh                         # AWS EC2 Initialization Script
+├── pom.xml                             # Maven Backend Configuration
+├── postman-collection.json             # Complete API Test Collection
+├── SETUP.md                            # Setup Guide
+├── README.md                           # This file
+└── test.md                             # Testing Guide
 ```
 
 ---
 
 ## 🚀 Key Features
 
-### 1. **Microservice Registry** (Service Discovery)
-- Register/deregister microservices
-- Service health status tracking
-- Service instance management
-- Load balancing support
+### 1. **Hotel Booking Management**
+- Room availability checking & real-time booking
+- Booking expiration handling
+- Customer reservation lifecycle management
+- Room inventory management
 
-### 2. **RESTful API**
-- CRUD operations for services
-- Service lookup by name, ID, or status
-- Comprehensive error handling
-- Standardized response format
+### 2. **Authentication & Security**
+- JWT stateless authentication
+- Role based access control (User / Admin)
+- Password encryption with BCrypt
+- Secured API endpoints
+- Request validation
 
-### 3. **Database Layer**
-- JPA/Hibernate ORM
-- PostgreSQL for production
-- H2 in-memory for development/testing
-- Soft delete implementation
-- Audit timestamps (createdAt, updatedAt)
+### 3. **Payment Processing System**
+- Mock payment gateway integration
+- Payment transaction tracking
+- Payment status management
+- Transaction audit logging
 
-### 4. **Production-Ready Features**
-- Centralized exception handling
-- Structured logging (SLF4J + Logback)
-- Health check endpoints
-- Application metrics via Spring Actuator
-- Database connection pooling (HikariCP)
-- Input validation
+### 4. **RESTful API Architecture**
+- Standardized JSON response format
+- Global exception handling
+- Proper HTTP status codes
+- Multi-environment configuration
+- Database connection pooling
 
-### 5. **Deployment & DevOps**
-- Multi-stage Docker build
-- Docker Compose setup (backend + PostgreSQL)
-- Automated deployment scripts
-- Health checks configured
-- Environment-based configuration
+### 5. **Full Stack Implementation**
+- Modern React Frontend with Vite
+- Responsive user interface
+- Separate frontend / backend layers
+- CORS configuration
 
 ---
 
@@ -83,14 +121,17 @@ COMP4442_Project/
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| **Runtime** | Java | 17 LTS |
-| **Framework** | Spring Boot | 3.2.0 |
-| **ORM** | Spring Data JPA | Hibernate |
-| **Database** | PostgreSQL / H2 | 15 / Latest |
-| **Container** | Docker | Latest |
-| **Build** | Maven | 3.9+ |
-| **Logging** | SLF4J + Logback | --  |
-| **Testing** | JUnit 5, MockMvc | --   |
+| **Backend Runtime** | Java | 17 LTS |
+| **Framework** | Spring Boot | 3.2.x |
+| **Security** | Spring Security + JWT | -- |
+| **ORM** | Spring Data JPA | -- |
+| **Database** | H2 (Dev) / PostgreSQL (Prod) | -- |
+| **Build Tool** | Maven | 3.9+ |
+| **Frontend Framework** | React | 18 |
+| **Frontend Build** | Vite | 5.x |
+| **Deployment** | AWS EC2 | -- |
+| **Logging** | SLF4J + Logback | -- |
+| **Testing** | JUnit 5 | -- |
 
 ---
 
@@ -99,42 +140,37 @@ COMP4442_Project/
 ### Prerequisites
 - Java 17+
 - Maven 3.9+
-- Docker & Docker Compose
+- Node.js 20+ & npm
 - Git
 
 ### 1. Clone Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/TonyAuYeung-star/COMP4442_Project.git
 cd COMP4442_Project
 ```
 
-### 2. Local Development
+### 2. Backend Setup
 ```bash
-# Start with Docker Compose (recommended)
-docker-compose up -d
-
-# Or run with Maven
+# Build Backend
 mvn clean install
-./scripts/start-dev.sh
+
+# Run Backend Development Server
+mvn spring-boot:run
+
+# Backend will start on http://localhost:8080
 ```
 
-### 3. Build & Deploy
-
-#### Docker Build
+### 3. Frontend Setup
 ```bash
-docker build -t comp4442-service:latest .
-docker run -d -p 8080:8080 comp4442-service:latest
-```
+cd frontend
 
-#### Deployment Script
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
+# Install Dependencies
+npm install
 
-#### Push to AWS ECR
-```bash
-ECR_URI=<your-ecr-uri> ./scripts/deploy.sh
+# Run Frontend Development Server
+npm run dev
+
+# Frontend will start on http://localhost:5173
 ```
 
 ---
@@ -143,299 +179,140 @@ ECR_URI=<your-ecr-uri> ./scripts/deploy.sh
 
 ### Base URL: `http://localhost:8080/api`
 
-#### Service Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/v1/services` | Register new service |
-| GET | `/v1/services` | Get all services |
-| GET | `/v1/services/{id}` | Get service by ID |
-| POST | `/v1/services/query/by-name` | Query service by name (JSON body) |
-| POST | `/v1/services/query/by-status` | Filter by status (JSON body) |
-| PUT | `/v1/services/{id}` | Update service |
-| DELETE | `/v1/services/{id}` | Delete service |
+#### Authentication
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/auth/register` | User Registration | ❌ |
+| POST | `/auth/login` | User Login & Get JWT | ❌ |
 
-#### Health & Info
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/v1/health` | Health check |
-| GET | `/v1/info` | Application info |
+#### Room Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/rooms` | List all available rooms | ❌ |
+| GET | `/rooms/{id}` | Get room details | ❌ |
+| POST | `/rooms` | Create new room | ✅ Admin |
+| PUT | `/rooms/{id}` | Update room information | ✅ Admin |
+| DELETE | `/rooms/{id}` | Delete room | ✅ Admin |
 
-### Example Requests
+#### Booking Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/bookings` | Create new booking | ✅ User |
+| GET | `/bookings` | Get user bookings | ✅ User |
+| GET | `/bookings/{id}` | Get booking details | ✅ User |
+| DELETE | `/bookings/{id}` | Cancel booking | ✅ User |
 
-#### Register a Service
-```bash
-curl -X POST http://localhost:8080/api/v1/services \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serviceName": "auth-service",
-    "host": "auth.example.com",
-    "port": 8081,
-    "description": "Authentication microservice",
-    "healthCheckUrl": "/health",
-    "version": "1.0.0"
-  }'
-```
-
-#### Get All Services
-```bash
-curl http://localhost:8080/api/v1/services
-```
-
-#### Health Check
-```bash
-curl http://localhost:8080/api/v1/health
-```
-
----
-
-## 🗄️ Database Schema
-
-### Services Table
-```sql
-CREATE TABLE services (
-    id BIGINT PRIMARY KEY,
-    service_name VARCHAR(255) UNIQUE NOT NULL,
-    host VARCHAR(255) NOT NULL,
-    port INT NOT NULL,
-    status VARCHAR(50),
-    description TEXT,
-    health_check_url VARCHAR(255),
-    version VARCHAR(50),
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    is_deleted BOOLEAN
-);
-```
-
-### Service Instances Table
-```sql
-CREATE TABLE service_instances (
-    id BIGINT PRIMARY KEY,
-    service_id BIGINT NOT NULL REFERENCES services(id),
-    instance_id VARCHAR(255),
-    hostname VARCHAR(255) NOT NULL,
-    port INT NOT NULL,
-    status VARCHAR(50),
-    heartbeat_time BIGINT,
-    metadata TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    is_deleted BOOLEAN
-);
-```
-
----
-
-## 🧪 Testing
-
-### Run Tests
-```bash
-mvn test
-```
-
-### Test Coverage
-- Unit tests for services
-- Integration tests for controllers
-- Repository tests
-- Exception handling tests
+#### Payment System
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/payments` | Process payment | ✅ User |
+| GET | `/payments/{bookingId}` | Get payment status | ✅ User |
 
 ---
 
 ## 📋 Configuration
 
-### Development (`application-dev.yml`)
-- H2 in-memory database
-- SQL logging enabled
-- DEBUG level logging
+### Environment Profiles
+This application supports multi-environment configuration:
 
-### Production (`application-prod.yml`)
-- PostgreSQL database
-- Connection pooling optimized
-- INFO level logging
-- File-based logging with rotation
+| Profile | Description | Database |
+|---------|-------------|----------|
+| `dev` | Development Mode | H2 In-Memory Database |
+| `prod` | Production Mode | PostgreSQL Database |
 
-### Environment Variables
+### Active Profile Selection
 ```bash
-SPRING_PROFILES_ACTIVE=prod
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/comp4442_db
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=secure_password
-JAVA_OPTS=-Xmx1g -Xms512m
+# Development (default)
+mvn spring-boot:run
+
+# Production
+mvn spring-boot:run -Dspring.profiles.active=prod
 ```
 
 ---
 
 ## 🚀 AWS EC2 Deployment
 
-### 1. Launch EC2 Instance
+### EC2 Instance Setup
+The project includes `ec2-init.sh` script that automatically configures EC2 instance:
+1. Install Java 17 Runtime
+2. Configure systemd service
+3. Setup application directories
+4. Configure log rotation
+5. Open required firewall ports
+
+### Deployment Steps
 ```bash
-# The EC2 user data script (ec2-init.sh) will:
-# - Install Java 17
-# - Create application directory
-# - Configure logging
-```
+# 1. Upload jar file to EC2
+scp target/comp4442-project.jar ec2-user@<EC2_IP>:/home/ec2-user/
 
-### 2. Deploy Application
-```bash
-# SSH into EC2
-ssh -i your-key.pem ubuntu@your-ec2-ip
+# 2. SSH into EC2 instance
+ssh -i key.pem ec2-user@<EC2_IP>
 
-# Pull Docker image from ECR
-aws ecr get-login-password --region us-west-2 | \
-  docker login --username AWS --password-stdin <ECR-URI>
-
-docker pull <ECR-URI>/comp4442-service:latest
-
-# Run containers
-docker run -d \
-  -p 8080:8080 \
-  -e SPRING_PROFILES_ACTIVE=prod \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/comp4442_db \
-  <ECR-URI>/comp4442-service:latest
-```
-
-### 3. Setup RDS (Optional)
-```bash
-# Create RDS PostgreSQL instance
-# Update SPRING_DATASOURCE_URL to RDS endpoint
-```
-
-### 4. Configure EBS Volume
-```bash
-# Mount EBS for persistent data/logs
-sudo mkfs.ext4 /dev/nvme1n1
-sudo mkdir -p /mnt/data
-sudo mount /dev/nvme1n1 /mnt/data
+# 3. Start application
+java -jar comp4442-project.jar --spring.profiles.active=prod
 ```
 
 ---
 
-## 📊 Monitoring & Logging
+## 🧪 Testing
 
-### Application Logs
+### Health Check
 ```bash
-# View logs from container
-docker logs -f comp4442-backend
-
-# Access H2 Console (dev)
-http://localhost:8080/h2-console
-
-# Spring Boot Actuator Metrics
-http://localhost:8080/actuator/metrics
+# Run all tests
+mvn test
 ```
 
-### Health Checks
+### Application Info
 ```bash
-# Application health
-http://localhost:8080/api/v1/health
+curl http://localhost:8080/api/v1/info
+```
 
-# Spring Actuator health
-http://localhost:8080/actuator/health
+### API Testing
+Import `postman-collection.json` into Postman for complete API testing including:
+- All endpoint test cases
+- Authentication workflow
+- Booking scenario tests
+- Service registry tests
+
+---
+
+
+### Application Health
+```bash
+# Check application status
+curl http://localhost:8080/api/health
+
+# View registered services
+curl http://localhost:8080/api/services
 ```
 
 ---
 
-## 🔄 CI/CD Pipeline (GitHub Actions)
+## 🤝 Course Submission
 
-Example workflow for automated testing and deployment:
+This project is submitted for COMP4442 Service Computing course evaluation at The Hong Kong Polytechnic University.
 
-```yaml
-name: Build & Deploy
-
-on: [push, pull_request]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Java
-        uses: actions/setup-java@v2
-        with:
-          java-version: '17'
-      - name: Build with Maven
-        run: mvn clean package
-      - name: Build Docker
-        run: docker build -t comp4442-service .
-```
-
----
-
-## 📝 Development Trace (Git Commits)
-
-This project maintains a comprehensive development history on GitHub:
-
-- Initial project setup
-- Database schema design
-- API endpoint implementation
-- Docker configuration
-- Deployment scripts
-- Testing implementation
-- Documentation
-
-**Access:** [GitHub Repository](https://github.com/your-username/COMP4442_Project)
-
----
-
-## 🤝 Sharing with Teacher
-
-**Important:** Ensure the GitHub repository is shared with:
-- **Email:** csqwang@polyu.edu.hk
-- **Title:** "Comp4442 [Your ID] [Your Name] Backend Repository"
-- **Access Level:** Read access for evaluation
-
----
-
-## 🐛 Troubleshooting
-
-### Application won't start
-```bash
-# Check logs
-docker logs comp4442-backend
-
-# Verify database connection
-curl -i http://localhost:8080/api/v1/health
-```
-
-### Database connection issues
-```bash
-# Check PostgreSQL is running
-docker ps | grep postgres
-
-# Verify connection
-psql -h localhost -U comp4442_user -d comp4442_db
-```
-
-### Port conflicts
-```bash
-# Find process using port 8080
-lsof -i :8080
-
-# Change port in docker-compose.yml or application.yml
-```
-
----
-
-## 📚 References
-
-- [Spring Boot Official Docs](https://spring.io/projects/spring-boot)
-- [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
-- [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [AWS EC2 Guide](https://docs.aws.amazon.com/ec2/)
+✅ Backend Architecture
+✅ REST API Design
+✅ Security Implementation
+✅ Service Registry Pattern
+✅ Deployment Configuration
+✅ Complete Documentation
 
 ---
 
 ## 📄 License
 
-This project is for educational purposes as part of COMP4442 at PolyU.
+This project is for educational purposes as part of COMP4442 curriculum at PolyU.
 
 ---
 
 ## 👤 Author
 
-**Tony**  
+**Tony** & **Harry**
 COMP4442 Semester Project - Backend Development
 
 ---
 
-Last Updated: 2026-04-15
+Last Updated: 2026-04-29
