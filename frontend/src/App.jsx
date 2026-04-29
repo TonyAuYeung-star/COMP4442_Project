@@ -66,6 +66,52 @@ function isValidDateRange(checkIn, checkOut) {
   return new Date(checkOut) > new Date(checkIn)
 }
 
+function nextDay(dateStr) {
+  if (!dateStr) return undefined
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().split('T')[0]
+}
+
+function formatRemainingTime(expiresAt, nowMs) {
+  if (!expiresAt) return null
+  const remainingMs = new Date(expiresAt).getTime() - nowMs
+  if (Number.isNaN(remainingMs) || remainingMs <= 0) return '00:00'
+  const totalSeconds = Math.floor(remainingMs / 1000)
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0')
+  const seconds = String(totalSeconds % 60).padStart(2, '0')
+  return `${minutes}:${seconds}`
+}
+
+function validatePaymentForm({ expiryMonth, expiryYear, cvv }) {
+  if (!/^\d{3}$/.test(cvv || '')) {
+    return 'CVV must be exactly 3 digits.'
+  }
+  if (!/^\d{1,2}$/.test(expiryMonth || '')) {
+    return 'Expiry month must be a number between 1 and 12.'
+  }
+  const month = Number(expiryMonth)
+  if (month < 1 || month > 12) {
+    return 'Expiry month must be a number between 1 and 12.'
+  }
+  if (!/^\d{4}$/.test(expiryYear || '')) {
+    return 'Expiry year must be exactly 4 digits.'
+  }
+  if (Number(expiryYear) <= 2026) {
+    return 'Expiry year must be greater than 2026.'
+  }
+  return null
+}
+
+function getRoomImageSrc(room) {
+  const fallback = 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'
+  const imageUrl = room?.imageUrl?.trim()
+  if (!imageUrl) return fallback
+  const version = room?.updatedAt ? encodeURIComponent(room.updatedAt) : ''
+  const separator = imageUrl.includes('?') ? '&' : '?'
+  return version ? `${imageUrl}${separator}v=${version}` : imageUrl
+}
+
 function App() {
   const [view, setView] = useState('explore')
   const [rooms, setRooms] = useState([])
@@ -74,6 +120,15 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [authMode, setAuthMode] = useState('login')
   const [banner, setBanner] = useState({ type: 'ok', text: '' })
+  const [nowMs, setNowMs] = useState(Date.now())
+  const [paymentModalBooking, setPaymentModalBooking] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({
+    cardNumber: '4111111111111111',
+    expiryMonth: '',
+    expiryYear: '',
+    cvv: '',
+  })
+  const [processingPayment, setProcessingPayment] = useState(false)
 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
   const [registerForm, setRegisterForm] = useState({
@@ -110,16 +165,22 @@ function App() {
 
   const isAdmin = user?.role === 'ADMIN'
   const bannerTimerRef = useRef(null)
+  const expiryRefreshInFlightRef = useRef(false)
 
   const bookingStats = useMemo(() => {
     const total = bookings.length
-    const active = bookings.filter((b) => b.status !== 'CANCELLED').length
-    const cancelled = bookings.filter((b) => b.status === 'CANCELLED').length
+    const active = bookings.filter((b) => b.status === 'CONFIRMED').length
+    const cancelled = bookings.filter((b) => b.status === 'CANCELLED' || b.status === 'EXPIRED').length
+    const pending = bookings.filter((b) => b.status === 'PENDING_PAYMENT').length
     const spent = bookings
-      .filter((b) => b.status !== 'CANCELLED')
+      .filter((b) => b.status === 'CONFIRMED')
       .reduce((sum, b) => sum + Number(b.totalPrice || 0), 0)
-    return { total, active, cancelled, spent }
+    return { total, active, cancelled, pending, spent }
   }, [bookings])
+  const visibleRooms = useMemo(
+    () => (view === 'explore' ? rooms.filter((room) => room.isAvailable !== false) : rooms),
+    [rooms, view],
+  )
 
   useEffect(() => {
     if (user) {
@@ -169,6 +230,16 @@ function App() {
     }
   }, [isAdmin, showBanner, user?.token])
 
+  const loadAdminRooms = useCallback(async () => {
+    if (!user?.token || !isAdmin) return
+    try {
+      const data = await apiRequest('/v1/admin/rooms', { token: user.token })
+      setRooms(data || [])
+    } catch (error) {
+      showBanner('error', error.message)
+    }
+  }, [isAdmin, showBanner, user?.token])
+
   useEffect(() => {
     loadRooms()
   }, [loadRooms])
@@ -181,9 +252,49 @@ function App() {
 
   useEffect(() => {
     if (view === 'admin' && isAdmin) {
+      loadAdminRooms()
       loadAdminBookings()
     }
-  }, [view, isAdmin, loadAdminBookings])
+  }, [view, isAdmin, loadAdminBookings, loadAdminRooms])
+
+  useEffect(() => {
+    if (view === 'explore') {
+      loadRooms()
+    }
+  }, [view, loadRooms])
+
+  useEffect(() => {
+    if (view === 'bookings' && user?.token) {
+      loadBookings()
+    }
+  }, [view, user?.token, loadBookings])
+
+  useEffect(() => {
+    const hasPendingPayments = bookings.some((booking) => booking.status === 'PENDING_PAYMENT' && booking.expiresAt)
+    if (!hasPendingPayments) return
+
+    const timer = window.setInterval(() => {
+      const currentNow = Date.now()
+      setNowMs(currentNow)
+
+      const hasExpiredPending = bookings.some((booking) => {
+        if (booking.status !== 'PENDING_PAYMENT' || !booking.expiresAt) return false
+        const remainingMs = new Date(booking.expiresAt).getTime() - currentNow
+        return !Number.isNaN(remainingMs) && remainingMs <= 0
+      })
+
+      if (hasExpiredPending && !expiryRefreshInFlightRef.current) {
+        expiryRefreshInFlightRef.current = true
+        loadBookings().finally(() => {
+          expiryRefreshInFlightRef.current = false
+        })
+      }
+    }, 1000)
+
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [bookings, loadBookings])
 
   useEffect(
     () => () => {
@@ -321,7 +432,7 @@ function App() {
     }
 
     try {
-      await apiRequest('/v1/bookings/create', {
+      const createdBooking = await apiRequest('/v1/bookings/create', {
         method: 'POST',
         token: user.token,
         body: bookingDraft,
@@ -329,6 +440,9 @@ function App() {
       showBanner('ok', 'Booking created successfully.')
       setAvailability(null)
       await loadBookings()
+      if (createdBooking) {
+        openPaymentModal(createdBooking)
+      }
     } catch (error) {
       showBanner('error', error.message)
     }
@@ -352,20 +466,113 @@ function App() {
     }
   }
 
-  async function payBooking(bookingId) {
-    if (!user?.token) return
+  function openPaymentModal(booking) {
+    if (!booking) return
+    if (booking.status !== 'PENDING_PAYMENT') {
+      showBanner('error', 'Only pending bookings can be paid.')
+      return
+    }
+    setPaymentModalBooking(booking)
+    setPaymentForm({
+      cardNumber: '4111111111111111',
+      expiryMonth: '',
+      expiryYear: '',
+      cvv: '',
+    })
+  }
+
+  function closePaymentModal() {
+    setPaymentModalBooking(null)
+    setProcessingPayment(false)
+  }
+
+  async function submitPayment() {
+    const booking = paymentModalBooking
+    if (!user?.token || !booking) return
+    const { cardNumber, expiryMonth, expiryYear, cvv } = paymentForm
+    if (!cardNumber || !expiryMonth || !expiryYear || !cvv) {
+      showBanner('error', 'Please fill in all payment fields.')
+      return
+    }
+    const paymentValidationError = validatePaymentForm({ expiryMonth, expiryYear, cvv })
+    if (paymentValidationError) {
+      showBanner('error', paymentValidationError)
+      return
+    }
+
     try {
-      const intent = await apiRequest('/v1/payments/stripe/intent', {
+      setProcessingPayment(true)
+      const payment = await apiRequest('/v1/payments/process', {
         method: 'POST',
         token: user.token,
-        body: { bookingId },
+        body: {
+          bookingId: booking.id,
+          cardNumber: cardNumber.trim(),
+          expiryMonth: expiryMonth.trim(),
+          expiryYear: expiryYear.trim(),
+          cvv: cvv.trim(),
+        },
       })
-      const payment = await apiRequest('/v1/payments/stripe/confirm', {
-        method: 'POST',
+      if (payment?.status === 'SUCCESS') {
+        showBanner('ok', `Payment successful. Reference: ${payment.paymentReferenceId}`)
+        closePaymentModal()
+        setView('bookings')
+      } else {
+        showBanner('error', payment?.message || `Payment ${payment?.status || 'failed'}.`)
+      }
+      await loadBookings()
+    } catch (error) {
+      showBanner('error', error.message)
+    } finally {
+      setProcessingPayment(false)
+    }
+  }
+
+  async function payLaterBooking(bookingId) {
+    if (!user?.token) return
+    const targetBooking = bookings.find((booking) => booking.id === bookingId)
+    if (Number(targetBooking?.payLaterCount || 0) >= 3) {
+      showBanner('error', 'Pay Later limit reached (maximum 3 times). Please complete payment now.')
+      return
+    }
+    try {
+      const updatedBooking = await apiRequest(`/v1/bookings/${bookingId}/pay-later`, {
+        method: 'PUT',
         token: user.token,
-        body: { paymentIntentId: intent.paymentIntentId },
       })
-      showBanner('ok', `Payment ${payment.status}.`)
+      showBanner('ok', 'Payment deadline refreshed for 1 minute.')
+      if (updatedBooking) {
+        setBookings((prev) => prev.map((booking) => (booking.id === updatedBooking.id ? updatedBooking : booking)))
+      }
+      await loadBookings()
+    } catch (error) {
+      showBanner('error', error.message)
+      await loadBookings()
+    }
+  }
+
+  async function updateAdminBooking(booking) {
+    if (!user?.token || !isAdmin) return
+    const checkIn = window.prompt('Check-in date (YYYY-MM-DD)', booking.checkIn || '')
+    if (checkIn === null) return
+    const checkOut = window.prompt('Check-out date (YYYY-MM-DD)', booking.checkOut || '')
+    if (checkOut === null) return
+    const totalPrice = window.prompt('Total price', String(booking.totalPrice ?? ''))
+    if (totalPrice === null) return
+
+    try {
+      await apiRequest(`/v1/admin/bookings/${booking.id}`, {
+        method: 'PUT',
+        token: user.token,
+        body: {
+          checkIn,
+          checkOut,
+          totalPrice: Number(totalPrice),
+        },
+      })
+      showBanner('ok', 'Booking updated.')
+      await loadAdminBookings()
+      await loadBookings()
     } catch (error) {
       showBanner('error', error.message)
     }
@@ -412,7 +619,7 @@ function App() {
         imageUrl: '',
         isAvailable: true,
       })
-      await loadRooms()
+      await loadAdminRooms()
     } catch (error) {
       showBanner('error', error.message)
     }
@@ -426,7 +633,7 @@ function App() {
         token: user.token,
       })
       showBanner('ok', 'Room deleted.')
-      await loadRooms()
+      await loadAdminRooms()
     } catch (error) {
       showBanner('error', error.message)
     }
@@ -509,7 +716,7 @@ function App() {
               </div>
             </div>
             <input type="date" value={roomSearch.checkIn} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkIn: e.target.value }))} />
-            <input type="date" min={roomSearch.checkIn || undefined} value={roomSearch.checkOut} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkOut: e.target.value }))} />
+            <input type="date" min={nextDay(roomSearch.checkIn)} value={roomSearch.checkOut} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkOut: e.target.value }))} />
             <div className="row-actions">
               <button type="submit" disabled={loading}>Search</button>
               <button type="button" className="ghost" onClick={resetSearchFilters}>Reset</button>
@@ -524,12 +731,12 @@ function App() {
               required
             >
               <option value="">Choose room</option>
-              {rooms.map((room) => (
+              {visibleRooms.map((room) => (
                 <option key={room.id} value={room.id}>{room.name} ({toMoney(room.pricePerNight)})</option>
               ))}
             </select>
             <input type="date" value={bookingDraft.checkIn} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkIn: e.target.value, checkOut: prev.checkOut && new Date(prev.checkOut) <= new Date(e.target.value) ? '' : prev.checkOut }))} required />
-            <input type="date" min={bookingDraft.checkIn || undefined} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkOut: e.target.value }))} required />
+            <input type="date" min={nextDay(bookingDraft.checkIn)} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkOut: e.target.value }))} required />
             <div className="row-actions">
               <button type="button" className="secondary" onClick={checkAvailability}>Check</button>
               <button type="submit">Book</button>
@@ -550,9 +757,15 @@ function App() {
             <>
               <h2>Available Rooms</h2>
               <div className="cards">
-                {rooms.map((room, index) => (
+                {visibleRooms.map((room, index) => (
                   <article className="room-card" style={{ animationDelay: `${index * 0.05}s` }} key={room.id}>
-                    <img src={room.imageUrl || 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'} alt={room.name} />
+                    <img
+                      src={getRoomImageSrc(room)}
+                      alt={room.name}
+                      onError={(event) => {
+                        event.currentTarget.src = 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'
+                      }}
+                    />
                     <div>
                       <span className="pill">{room.type}</span>
                       <h3>{room.name}</h3>
@@ -561,16 +774,19 @@ function App() {
                       <strong>{toMoney(room.pricePerNight)} / night</strong>
                       {isAdmin && (
                         <div className="inline-actions">
-                          <button type="button" className="ghost" onClick={() => setAdminRoomForm({
-                            id: room.id,
-                            name: room.name,
-                            type: room.type,
-                            capacity: room.capacity,
-                            pricePerNight: room.pricePerNight,
-                            amenities: room.amenities || '',
-                            imageUrl: room.imageUrl || '',
-                            isAvailable: room.isAvailable,
-                          })}>
+                          <button type="button" className="ghost" onClick={() => {
+                            setAdminRoomForm({
+                              id: room.id,
+                              name: room.name,
+                              type: room.type,
+                              capacity: room.capacity,
+                              pricePerNight: room.pricePerNight,
+                              amenities: room.amenities || '',
+                              imageUrl: room.imageUrl || '',
+                              isAvailable: room.isAvailable,
+                            })
+                            setView('admin')
+                          }}>
                             Edit
                           </button>
                           <button type="button" className="danger" onClick={() => deleteRoom(room.id)}>Delete</button>
@@ -579,7 +795,7 @@ function App() {
                     </div>
                   </article>
                 ))}
-                {!rooms.length && <p className="muted">No rooms found.</p>}
+                {!visibleRooms.length && <p className="muted">No rooms found.</p>}
               </div>
             </>
           )}
@@ -593,7 +809,8 @@ function App() {
                   <div className="stats">
                     <div><span>{bookingStats.total}</span>Total</div>
                     <div><span>{bookingStats.active}</span>Active</div>
-                    <div><span>{bookingStats.cancelled}</span>Cancelled</div>
+                    <div><span>{bookingStats.pending}</span>Pending</div>
+                    <div><span>{bookingStats.cancelled}</span>Cancelled/Expired</div>
                     <div><span>{toMoney(bookingStats.spent)}</span>Spent</div>
                   </div>
                   <div className="cards">
@@ -603,17 +820,28 @@ function App() {
                           <h3>{booking.roomName}</h3>
                           <p>{booking.checkIn} to {booking.checkOut}</p>
                           <p>Status: <strong>{booking.status}</strong></p>
+                          {booking.status === 'PENDING_PAYMENT' && booking.expiresAt && (
+                            <p>Payment expires in: <strong>{formatRemainingTime(booking.expiresAt, nowMs)}</strong></p>
+                          )}
+                          {booking.status === 'CANCELLED' && booking.cancellationSource && (
+                            <p>Cancelled by: <strong>{booking.cancellationSource === 'USER' ? 'You' : 'Administrator'}</strong></p>
+                          )}
                           <p>Total: <strong>{toMoney(booking.totalPrice)}</strong></p>
                         </div>
                         <div className="inline-actions">
-                          {booking.status !== 'CANCELLED' && (
+                          {booking.status !== 'CANCELLED' && booking.status !== 'EXPIRED' && (
                             <button type="button" className="danger" onClick={() => cancelBooking(booking.id)}>
                               Cancel
                             </button>
                           )}
-                          {booking.status !== 'CANCELLED' && (
-                            <button type="button" className="secondary" onClick={() => payBooking(booking.id)}>
+                          {booking.status === 'PENDING_PAYMENT' && (
+                            <button type="button" className="secondary" onClick={() => openPaymentModal(booking)}>
                               Pay
+                            </button>
+                          )}
+                          {booking.status === 'PENDING_PAYMENT' && (
+                            <button type="button" className="ghost" onClick={() => payLaterBooking(booking.id)}>
+                              Pay Later ({Math.max(0, 3 - Number(booking.payLaterCount || 0))} left)
                             </button>
                           )}
                         </div>
@@ -631,8 +859,18 @@ function App() {
               <h2>Admin Room Editor</h2>
               <form className="form-grid" onSubmit={submitAdminRoom}>
                 <input placeholder="Room Name" value={adminRoomForm.name} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, name: e.target.value }))} required />
-                <input placeholder="Type" value={adminRoomForm.type} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, type: e.target.value }))} required />
-                <input type="number" min="1" placeholder="Capacity" value={adminRoomForm.capacity} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, capacity: e.target.value }))} required />
+                <select value={adminRoomForm.type} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, type: e.target.value }))} required>
+                  <option value="">Select room type</option>
+                  {ROOM_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <select value={adminRoomForm.capacity} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, capacity: Number(e.target.value) }))} required>
+                  <option value="">Select capacity</option>
+                  {ROOM_CAPACITIES.map((capacity) => (
+                    <option key={capacity} value={capacity}>{capacity} guest{capacity > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
                 <input type="number" min="1" step="0.01" placeholder="Price" value={adminRoomForm.pricePerNight} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, pricePerNight: e.target.value }))} required />
                 <input placeholder="Image URL" value={adminRoomForm.imageUrl} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, imageUrl: e.target.value }))} />
                 <input placeholder="Amenities" value={adminRoomForm.amenities} onChange={(e) => setAdminRoomForm((prev) => ({ ...prev, amenities: e.target.value }))} />
@@ -665,12 +903,20 @@ function App() {
                       <h3>{booking.roomName}</h3>
                       <p>User: {booking.username}</p>
                       <p>{booking.checkIn} to {booking.checkOut}</p>
-                      <p>Total: {toMoney(booking.totalPrice)} | Status: {booking.status}</p>
+                          <p>Total: {toMoney(booking.totalPrice)} | Status: {booking.status}</p>
+                          {booking.status === 'CANCELLED' && booking.cancellationSource && (
+                            <p>Cancelled by: <strong>{booking.cancellationSource === 'USER' ? 'User' : 'Administrator'}</strong></p>
+                          )}
                     </div>
-                    {booking.status !== 'CANCELLED' && (
-                      <button type="button" className="danger" onClick={() => cancelBooking(booking.id, true)}>
-                        Admin Cancel
-                      </button>
+                    {booking.status !== 'CANCELLED' && booking.status !== 'EXPIRED' && (
+                      <div className="inline-actions">
+                        <button type="button" className="ghost" onClick={() => updateAdminBooking(booking)}>
+                          Edit
+                        </button>
+                        <button type="button" className="danger" onClick={() => cancelBooking(booking.id, true)}>
+                          Admin Cancel
+                        </button>
+                      </div>
                     )}
                   </article>
                 ))}
@@ -684,9 +930,9 @@ function App() {
               <h2>{user ? 'Session' : 'Authenticate'}</h2>
               {!user && (
                 <>
-                  <div className="tabs">
-                    <button className={authMode === 'login' ? 'active' : ''} onClick={() => setAuthMode('login')}>Login</button>
-                    <button className={authMode === 'register' ? 'active' : ''} onClick={() => setAuthMode('register')}>Register</button>
+                  <div className="tabs account-tabs">
+                    <button className={`auth-toggle ${authMode === 'login' ? 'active' : ''}`} onClick={() => setAuthMode('login')}>Login</button>
+                    <button className={`auth-toggle ${authMode === 'register' ? 'active' : ''}`} onClick={() => setAuthMode('register')}>Register</button>
                   </div>
                   <form className="form-grid" onSubmit={submitAuth}>
                     {authMode === 'login' && (
@@ -722,6 +968,88 @@ function App() {
           )}
         </section>
       </main>
+
+      {paymentModalBooking && (
+        <div className="payment-modal-backdrop" onClick={closePaymentModal}>
+          <div className="payment-modal-card" onClick={(event) => event.stopPropagation()}>
+            <h3>Payment</h3>
+            <p><strong>{paymentModalBooking.roomName || 'Room Booking'}</strong></p>
+            <p>{paymentModalBooking.checkIn} to {paymentModalBooking.checkOut} | {toMoney(paymentModalBooking.totalPrice)}</p>
+
+            <label>Card Number</label>
+            <input
+              type="text"
+              value={paymentForm.cardNumber}
+              onChange={(event) => setPaymentForm((prev) => ({ ...prev, cardNumber: event.target.value }))}
+              placeholder="4111111111111111"
+              maxLength={19}
+            />
+
+            <div className="payment-grid">
+              <div>
+                <label>Expiry Month (MM)</label>
+                <input
+                  type="text"
+                  value={paymentForm.expiryMonth}
+                  onChange={(event) => setPaymentForm((prev) => ({ ...prev, expiryMonth: event.target.value }))}
+                  placeholder="12"
+                  maxLength={2}
+                />
+              </div>
+              <div>
+                <label>Expiry Year (YYYY)</label>
+                <input
+                  type="text"
+                  value={paymentForm.expiryYear}
+                  onChange={(event) => setPaymentForm((prev) => ({ ...prev, expiryYear: event.target.value }))}
+                  placeholder="2030"
+                  maxLength={4}
+                />
+              </div>
+            </div>
+
+            <label>CVV</label>
+            <input
+              type="password"
+              value={paymentForm.cvv}
+              onChange={(event) => setPaymentForm((prev) => ({ ...prev, cvv: event.target.value }))}
+              placeholder="123"
+              maxLength={4}
+            />
+
+            <p className="payment-hint">
+              Demo cards: 4111111111111111 (success), 5500005555555559 (success),
+              0000000000000000 (declined), 1234567890123456 (insufficient funds)
+            </p>
+
+            <div className="row-actions">
+              <button type="button" className="ghost" onClick={closePaymentModal}>Cancel</button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={submitPayment}
+                disabled={processingPayment}
+              >
+                {processingPayment ? 'Processing...' : 'Pay'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (Number(paymentModalBooking.payLaterCount || 0) >= 3) {
+                    showBanner('error', 'Pay Later limit reached (maximum 3 times). Please complete payment now.')
+                    return
+                  }
+                  await payLaterBooking(paymentModalBooking.id)
+                  closePaymentModal()
+                  setView('bookings')
+                }}
+              >
+                Pay Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

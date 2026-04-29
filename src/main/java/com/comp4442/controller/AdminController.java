@@ -142,4 +142,15 @@ public class AdminController {
                     .body(ApiResponse.error(400, e.getMessage()));
         }
     }
+
+    /**
+     * Get ALL rooms including unavailable for admin management
+     * GET /api/v1/admin/rooms
+     */
+    @GetMapping("/rooms")
+    public ResponseEntity<ApiResponse<List<RoomDTO>>> getAllRoomsAdmin() {
+        log.info("Admin fetching all rooms");
+        List<RoomDTO> rooms = roomService.getAllRooms();
+        return ResponseEntity.ok(ApiResponse.success("All rooms retrieved", rooms));
+    }
 }

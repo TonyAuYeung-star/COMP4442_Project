@@ -5,7 +5,6 @@ package com.comp4442.model.entity;
  */
 public enum PaymentStatus {
     PENDING,
-    SUCCEEDED,
-    FAILED,
-    REFUNDED
+    SUCCESS,
+    FAILED
 }
