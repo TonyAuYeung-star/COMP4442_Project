@@ -110,6 +110,18 @@ function getRoomImageSrc(room) {
   return version ? `${imageUrl}${separator}v=${version}` : imageUrl
 }
 
+function calculatePriceBounds(roomList) {
+  if (!roomList?.length) {
+    return { min: 0, max: 999 }
+  }
+
+  const prices = roomList.map((room) => Number(room.pricePerNight || 0))
+  const min = Math.floor(Math.min(...prices) / PRICE_STEP) * PRICE_STEP
+  const max = Math.ceil((Math.max(...prices) + PRICE_STEP) / PRICE_STEP) * PRICE_STEP
+
+  return { min, max }
+}
+
 function App() {
   const [view, setView] = useState('explore')
   const [rooms, setRooms] = useState([])
@@ -140,10 +152,11 @@ function App() {
     type: '',
     capacity: '',
     minPrice: '0',
-    maxPrice: '700',
+    maxPrice: '999',
     checkIn: '',
     checkOut: '',
   })
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 999 })
   const [bookingDraft, setBookingDraft] = useState({ roomId: null, checkIn: '', checkOut: '' })
   const [availability, setAvailability] = useState(null)
   const [adminRoomForm, setAdminRoomForm] = useState({
@@ -181,18 +194,8 @@ function App() {
     [rooms, view],
   )
 
-  // Calculate dynamic price range based on actual room prices
-  const PRICE_MIN = useMemo(() => {
-    if (!rooms.length) return 0
-    return Math.floor(Math.min(...rooms.map(r => Number(r.pricePerNight || 0))) / PRICE_STEP) * PRICE_STEP
-  }, [rooms])
-
-  const PRICE_MAX = useMemo(() => {
-    if (!rooms.length) return 700
-    const maxRoomPrice = Math.max(...rooms.map(r => Number(r.pricePerNight || 0)))
-    // Round up to nearest PRICE_STEP and add extra buffer so highest price is selectable
-    return Math.ceil((maxRoomPrice + PRICE_STEP) / PRICE_STEP) * PRICE_STEP
-  }, [rooms])
+  const PRICE_MIN = priceBounds.min
+  const PRICE_MAX = priceBounds.max
 
   useEffect(() => {
     if (user) {
@@ -214,7 +217,9 @@ function App() {
     setLoading(true)
     try {
       const data = await apiRequest('/v1/rooms')
-      setRooms(data || [])
+      const roomList = data || []
+      setRooms(roomList)
+      setPriceBounds(calculatePriceBounds(roomList))
     } catch (error) {
       showBanner('error', error.message)
     } finally {
@@ -246,7 +251,9 @@ function App() {
     if (!user?.token || !isAdmin) return
     try {
       const data = await apiRequest('/v1/admin/rooms', { token: user.token })
-      setRooms(data || [])
+      const roomList = data || []
+      setRooms(roomList)
+      setPriceBounds(calculatePriceBounds(roomList))
     } catch (error) {
       showBanner('error', error.message)
     }
