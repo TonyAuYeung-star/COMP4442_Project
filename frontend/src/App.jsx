@@ -81,6 +81,14 @@ function formatRemainingTime(expiresAt, nowMs) {
   return `${minutes}:${seconds}`
 }
 
+function calculateEstimatedTotal(draft, roomsList) {
+  if (!draft || !draft.roomId || !draft.checkIn || !draft.checkOut) return 0
+  const room = roomsList?.find(r => r.id === draft.roomId)
+  if (!room) return 0
+  const nights = Math.ceil((new Date(draft.checkOut) - new Date(draft.checkIn)) / (1000 * 60 * 60 * 24))
+  return (room.pricePerNight || 0) * nights
+}
+
 function validatePaymentForm({ expiryMonth, expiryYear, cvv }) {
   if (!/^\d{3}$/.test(cvv || '')) {
     return 'CVV must be exactly 3 digits.'
@@ -227,13 +235,15 @@ function App() {
     }
   }, [showBanner])
 
-  const loadBookings = useCallback(async () => {
+  const loadBookings = useCallback(async (silent = false) => {
     if (!user?.token) return
     try {
       const data = await apiRequest('/v1/bookings/history', { token: user.token })
       setBookings(data || [])
     } catch (error) {
-      showBanner('error', error.message)
+      if (!silent) {
+        showBanner('error', error.message)
+      }
     }
   }, [showBanner, user?.token])
 
@@ -304,7 +314,7 @@ function App() {
 
       if (hasExpiredPending && !expiryRefreshInFlightRef.current) {
         expiryRefreshInFlightRef.current = true
-        loadBookings().finally(() => {
+        loadBookings(true).finally(() => {
           expiryRefreshInFlightRef.current = false
         })
       }
@@ -477,21 +487,9 @@ function App() {
       return
     }
 
-    try {
-      const createdBooking = await apiRequest('/v1/bookings/create', {
-        method: 'POST',
-        token: user.token,
-        body: bookingDraft,
-      })
-      showBanner('ok', 'Booking created successfully.')
-      setAvailability(null)
-      await loadBookings()
-      if (createdBooking) {
-        openPaymentModal(createdBooking)
-      }
-    } catch (error) {
-      showBanner('error', error.message)
-    }
+    // Open payment modal with booking draft instead of creating booking immediately
+    openPaymentModal(bookingDraft)
+    setAvailability(null)
   }
 
   async function cancelBooking(id, adminMode = false) {
@@ -512,13 +510,14 @@ function App() {
     }
   }
 
-  function openPaymentModal(booking) {
-    if (!booking) return
-    if (booking.status !== 'PENDING_PAYMENT') {
+  function openPaymentModal(bookingOrDraft) {
+    if (!bookingOrDraft) return
+    // If it's a draft (has no id), allow opening. If it's an existing booking, check status
+    if (bookingOrDraft.id && bookingOrDraft.status !== 'PENDING_PAYMENT') {
       showBanner('error', 'Only pending bookings can be paid.')
       return
     }
-    setPaymentModalBooking(booking)
+    setPaymentModalBooking(bookingOrDraft)
     setPaymentForm({
       cardNumber: '4111111111111111',
       expiryMonth: '',
@@ -534,8 +533,8 @@ function App() {
   }
 
   async function submitPayment() {
-    const booking = paymentModalBooking
-    if (!user?.token || !booking) return
+    const bookingOrDraft = paymentModalBooking
+    if (!user?.token || !bookingOrDraft) return
     setPaymentErrorMessage('')
 
     const { cardNumber, expiryMonth, expiryYear, cvv } = paymentForm
@@ -564,6 +563,18 @@ function App() {
 
     try {
       setProcessingPayment(true)
+
+      // If it's a draft (no id), create the booking first
+      let booking = bookingOrDraft
+      if (!booking.id) {
+        booking = await apiRequest('/v1/bookings/create', {
+          method: 'POST',
+          token: user.token,
+          body: bookingOrDraft,
+        })
+        setPaymentModalBooking(booking)
+      }
+
       const payment = await apiRequest('/v1/payments/process', {
         method: 'POST',
         token: user.token,
@@ -576,10 +587,7 @@ function App() {
         },
       })
       if (payment?.status === 'SUCCESS') {
-        // Generate unique reference number
-        const uniqueId = Math.random().toString(36).substring(2, 14).toUpperCase()
-        const paymentReference = `PAY-${uniqueId}`
-        showBanner('ok', `Payment successful. Reference: ${paymentReference}`)
+        showBanner('ok', `Payment successful. Reference Number: ${payment.paymentReferenceId}`)
         closePaymentModal()
         setView('bookings')
       } else {
@@ -932,12 +940,12 @@ function App() {
                       <article className="booking-card" key={booking.id}>
                         <div>
                           <h3>{booking.roomName}</h3>
-                          <p>{booking.checkIn} to {booking.checkOut}</p>
+                          <p>Booking Date: <strong>{booking.checkIn} to {booking.checkOut}</strong></p>
                           <p>Status: <strong>{booking.status}</strong></p>
                           {booking.status === 'PENDING_PAYMENT' && booking.expiresAt && (
                             <p>Payment expires in: <strong>{formatRemainingTime(booking.expiresAt, nowMs)}</strong></p>
                           )}
-                          {booking.status === 'CONFIRMED' && booking.paymentReferenceId && (
+                          {(booking.status === 'CONFIRMED' || booking.status === 'CANCELLED') && booking.paymentReferenceId && (
                             <p>Reference Number: <strong>{booking.paymentReferenceId}</strong></p>
                           )}
                           {booking.status === 'CANCELLED' && booking.cancellationSource && (
@@ -1039,9 +1047,9 @@ function App() {
                     <div>
                       <h3>{booking.roomName}</h3>
                       <p>User: {booking.username}</p>
-                      <p>{booking.checkIn} to {booking.checkOut}</p>
-                          <p>Total: {toMoney(booking.totalPrice)} | Status: {booking.status}</p>
-                          {booking.status === 'CONFIRMED' && booking.paymentReferenceId && (
+                      <p>Booking Date: {booking.checkIn} to {booking.checkOut}</p>
+                          <p>Total Price: {toMoney(booking.totalPrice)} | Status: {booking.status}</p>
+                          {(booking.status === 'CONFIRMED' || booking.status === 'CANCELLED') && booking.paymentReferenceId && (
                             <p>Reference Number: <strong>{booking.paymentReferenceId}</strong></p>
                           )}
                           {booking.status === 'CANCELLED' && booking.cancellationSource && (
@@ -1133,8 +1141,9 @@ function App() {
             animation: 'modalSlideIn 0.3s ease-out'
           }}>
             <h3>Payment</h3>
-            <p><strong>{paymentModalBooking.roomName || 'Room Booking'}</strong></p>
-            <p>{paymentModalBooking.checkIn} to {paymentModalBooking.checkOut} | {toMoney(paymentModalBooking.totalPrice)}</p>
+            <p><strong>{paymentModalBooking.roomName || (rooms.find(r => r.id === paymentModalBooking.roomId)?.name || 'Room Booking')}</strong></p>
+            <p>Booking Date: <strong>{paymentModalBooking.checkIn} to {paymentModalBooking.checkOut}</strong></p>
+            <p>Total Price: <strong>{paymentModalBooking.totalPrice || toMoney(calculateEstimatedTotal(paymentModalBooking, rooms))}</strong></p>
 
             {paymentErrorMessage && (
               <div className="payment-error" style={{
@@ -1212,11 +1221,28 @@ function App() {
               <button
                 type="button"
                 onClick={async () => {
-                  if (Number(paymentModalBooking.payLaterCount || 0) >= 3) {
+                  let booking = paymentModalBooking
+                  
+                  // If it's a draft (no id), create the booking first
+                  if (!booking.id) {
+                    try {
+                      booking = await apiRequest('/v1/bookings/create', {
+                        method: 'POST',
+                        token: user.token,
+                        body: booking,
+                      })
+                      setPaymentModalBooking(booking)
+                    } catch (error) {
+                      showBanner('error', error.message)
+                      return
+                    }
+                  }
+
+                  if (Number(booking.payLaterCount || 0) >= 3) {
                     showBanner('error', 'Pay Later limit reached (maximum 3 times). Please complete payment now.')
                     return
                   }
-                  await payLaterBooking(paymentModalBooking.id)
+                  await payLaterBooking(booking.id)
                   closePaymentModal()
                   setView('bookings')
                 }}

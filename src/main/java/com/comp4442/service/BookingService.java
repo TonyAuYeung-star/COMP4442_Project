@@ -19,6 +19,7 @@ import com.comp4442.model.dto.BookingOverviewDTO;
 import com.comp4442.model.entity.Booking;
 import com.comp4442.model.entity.BookingStatus;
 import com.comp4442.model.entity.CancellationSource;
+import com.comp4442.model.entity.PaymentStatus;
 import com.comp4442.model.entity.Room;
 import com.comp4442.model.entity.User;
 import com.comp4442.repository.BookingRepository;
@@ -197,6 +198,12 @@ public class BookingService {
     }
 
     private BookingDTO convertToDTO(Booking booking) {
+        String paymentRefId = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
+                .map(payment -> payment.getPaymentReferenceId())
+                .orElseGet(() -> paymentRepository.findByBookingId(booking.getId())
+                        .map(payment -> payment.getPaymentReferenceId())
+                        .orElse(null));
+
         return BookingDTO.builder()
                 .id(booking.getId())
                 .userId(booking.getUser().getId())
@@ -212,9 +219,7 @@ public class BookingService {
                 .payLaterCount(booking.getPayLaterCount() == null ? 0 : booking.getPayLaterCount())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
-                .paymentReferenceId(paymentRepository.findByBookingId(booking.getId())
-                        .map(payment -> payment.getPaymentReferenceId())
-                        .orElse(null))
+                .paymentReferenceId(paymentRefId)
                 .build();
     }
 

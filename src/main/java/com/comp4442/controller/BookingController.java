@@ -1,18 +1,27 @@
 package com.comp4442.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.comp4442.model.dto.ApiResponse;
 import com.comp4442.model.dto.BookingCreateRequest;
 import com.comp4442.model.dto.BookingDTO;
 import com.comp4442.model.dto.BookingOverviewDTO;
 import com.comp4442.service.BookingService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Booking Controller - handles booking creation, history, and cancellation
@@ -36,6 +45,11 @@ public class BookingController {
             HttpServletRequest httpRequest) {
         Long userId = (Long) httpRequest.getAttribute("userId");
         log.info("Creating booking for user: {}", userId);
+
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "User not authenticated"));
+        }
 
         try {
             BookingDTO result = bookingService.createBooking(userId, request);

@@ -32,8 +32,6 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/favicon.ico").permitAll()
-                .requestMatchers("/css/**", "/js/**").permitAll()
                 .requestMatchers("/v1/health", "/v1/info").permitAll()
                 .requestMatchers("/v1/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()

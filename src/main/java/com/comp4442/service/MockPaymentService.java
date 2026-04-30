@@ -62,13 +62,15 @@ public class MockPaymentService {
                         .build());
 
         payment.setAmount(booking.getTotalPrice());
-        payment.setPaymentReferenceId(generatePaymentReference());
         payment.setStatus(PaymentStatus.PENDING);
         payment.setFailureReason(null);
         payment.setUpdatedAt(LocalDateTime.now());
 
         String failureReason = validatePayment(normalizedCard, request.getExpiryMonth(), request.getExpiryYear(), request.getCvv());
         if (failureReason == null) {
+            if (payment.getPaymentReferenceId() == null) {
+                payment.setPaymentReferenceId(generatePaymentReference());
+            }
             payment.setStatus(PaymentStatus.SUCCESS);
             booking.setStatus(BookingStatus.CONFIRMED);
             booking.setExpiresAt(null);
