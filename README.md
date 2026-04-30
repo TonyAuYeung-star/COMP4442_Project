@@ -310,7 +310,7 @@ This project is for educational purposes as part of COMP4442 curriculum at PolyU
 
 ## 👤 Author
 
-**Tony** & **Harry**
+**Tony** & **Harry** & **Kim**
 COMP4442 Semester Project - Backend Development
 
 ---
