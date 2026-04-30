@@ -42,7 +42,8 @@ COMP4442_Project/
 │   │   │   │   ├── RoomRepository.java
 │   │   │   │   ├── BookingRepository.java
 │   │   │   │   ├── PaymentRepository.java
-│   │   │   │   └── UserRepository.java
+│   │   │   │   ├── ServiceRepository.java
+│   │   │   │   └── ServiceInstanceRepository.java
 │   │   │   ├── 📂 model/
 │   │   │   │   ├── 📂 entity/          # Database Entities
 │   │   │   │   └── 📂 dto/             # Data Transfer Objects
@@ -52,12 +53,9 @@ COMP4442_Project/
 │   │   │       ├── RoomNotAvailableException.java
 │   │   │       └── UnauthorizedException.java
 │   │   └── resources/
-│   │       ├── application.properties
 │   │       ├── application.yml
 │   │       ├── application-dev.yml
-│   │       ├── application-prod.yml
-│   │       └── static/
-│   └── test/                            # Unit & Integration Tests
+│   │       └── application-prod.yml
 │
 ├── 📂 frontend/                        # FRONTEND - React
 │   ├── src/
@@ -177,36 +175,66 @@ npm run dev
 
 ## 📡 API Endpoints
 
-### Base URL: `http://localhost:8080/api`
+### Base URL: `http://localhost:8080/api/v1`
 
-#### Authentication
+> ✅ All endpoints use `/v1/` API version prefix
+
+---
+
+#### 🔑 Authentication
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | POST | `/auth/register` | User Registration | ❌ |
-| POST | `/auth/login` | User Login & Get JWT | ❌ |
+| POST | `/auth/login` | User Login & Get JWT Token | ❌ |
 
-#### Room Management
+---
+
+#### 🏨 Room Management
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | GET | `/rooms` | List all available rooms | ❌ |
-| GET | `/rooms/{id}` | Get room details | ❌ |
-| POST | `/rooms` | Create new room | ✅ Admin |
-| PUT | `/rooms/{id}` | Update room information | ✅ Admin |
-| DELETE | `/rooms/{id}` | Delete room | ✅ Admin |
+| GET | `/rooms/{id}` | Get room details by ID | ❌ |
+| POST | `/rooms/search` | Search rooms with filters | ❌ |
+| POST | `/rooms/availability` | Check room availability | ❌ |
 
-#### Booking Management
+---
+
+#### 📅 Booking Management
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| POST | `/bookings` | Create new booking | ✅ User |
-| GET | `/bookings` | Get user bookings | ✅ User |
-| GET | `/bookings/{id}` | Get booking details | ✅ User |
-| DELETE | `/bookings/{id}` | Cancel booking | ✅ User |
+| POST | `/bookings/create` | Create new booking | ✅ User |
+| GET | `/bookings/history` | Get user booking history | ✅ User |
+| GET | `/bookings/overview` | Get booking statistics | ✅ User |
+| POST | `/bookings/{id}/cancel` | Cancel booking | ✅ User |
+| PUT | `/bookings/{id}/pay-later` | Mark booking for later payment | ✅ User |
 
-#### Payment System
+---
+
+#### 💳 Payment System
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| POST | `/payments` | Process payment | ✅ User |
-| GET | `/payments/{bookingId}` | Get payment status | ✅ User |
+| POST | `/payments/process` | Process payment transaction | ✅ User |
+
+---
+
+#### 👑 Admin Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/admin/rooms` | List all rooms (including disabled) | ✅ Admin |
+| POST | `/admin/rooms` | Create new room | ✅ Admin |
+| PUT | `/admin/rooms/{id}` | Update room information | ✅ Admin |
+| DELETE | `/admin/rooms/{id}` | Delete room | ✅ Admin |
+| GET | `/admin/bookings/all` | View all system bookings | ✅ Admin |
+| PUT | `/admin/bookings/{id}` | Modify any booking | ✅ Admin |
+| PUT | `/admin/bookings/{id}/cancel` | Admin cancel booking | ✅ Admin |
+
+---
+
+#### 🩺 System Health
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/health` | Application health check | ❌ |
+| GET | `/info` | Application information | ❌ |
 
 ---
 
@@ -263,9 +291,13 @@ java -jar comp4442-project.jar --spring.profiles.active=prod
 mvn test
 ```
 
-### Application Info
+### Application Info and Health
 ```bash
+# Application info
 curl http://localhost:8080/api/v1/info
+
+# Check application status
+curl http://localhost:8080/api/v1/health
 ```
 
 ### API Testing
@@ -274,18 +306,6 @@ Import `postman-collection.json` into Postman for complete API testing including
 - Authentication workflow
 - Booking scenario tests
 - Service registry tests
-
----
-
-
-### Application Health
-```bash
-# Check application status
-curl http://localhost:8080/api/health
-
-# View registered services
-curl http://localhost:8080/api/services
-```
 
 ---
 
@@ -315,4 +335,4 @@ COMP4442 Semester Project - Backend Development
 
 ---
 
-Last Updated: 2026-04-29
+Last Updated: 2026-04-30
