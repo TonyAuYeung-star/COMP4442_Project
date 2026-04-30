@@ -16,30 +16,23 @@ export JAVA_HOME=/usr/libexec/java_home -v 17
 # Install Maven
 brew install maven
 
-# Install Docker & Docker Desktop
-brew install docker
-# Download Docker Desktop from https://www.docker.com/products/docker-desktop
-
 # Verify installations
 java -version
 mvn -version
-docker --version
 ```
 
 #### Windows
 ```powershell
 # Using Chocolatey
-choco install openjdk17 maven docker
+choco install openjdk17 maven
 
 # Or download manually:
 # Java: https://www.oracle.com/java/technologies/downloads/#java17
 # Maven: https://maven.apache.org/download.cgi
-# Docker: https://www.docker.com/products/docker-desktop
 
 # Verify
 java -version
 mvn -version
-docker --version
 ```
 
 #### Ubuntu/Linux
@@ -51,11 +44,6 @@ sudo apt-get install openjdk-17-jdk
 
 # Install Maven
 sudo apt-get install maven
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo bash get-docker.sh
-sudo usermod -aG docker $USER
 ```
 
 ### 2. Clone and Setup Project
@@ -70,19 +58,7 @@ chmod +x scripts/*.sh
 
 ### 3. Development Environment
 
-#### Option A: Docker Compose (Recommended)
-```bash
-# Start services (backend + PostgreSQL)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f backend
-
-# Stop services
-docker-compose down
-```
-
-#### Option B: Maven Development
+#### Run with Maven
 ```bash
 # Install dependencies
 mvn clean install
@@ -129,19 +105,7 @@ curl -X POST http://localhost:8080/api/v1/services \
 2. Set baseUrl to `http://localhost:8080/api`
 3. Execute requests
 
-### 6. Build Docker Image
-```bash
-# Build image locally
-docker build -t comp4442-service:latest .
-
-# Run image
-docker run -d -p 8080:8080 comp4442-service:latest
-
-# View logs
-docker logs -f $(docker ps -q --filter "ancestor=comp4442-service:latest")
-```
-
-### 7. Deploy to AWS EC2
+### 6. Deploy to AWS EC2
 
 #### Step 1: Create EC2 Instance with User Data
 ```bash
@@ -158,12 +122,7 @@ bash /tmp/aws-init.sh
 
 #### Step 3: Deploy Application
 ```bash
-# Option A: Using docker-compose
-cd /home/ubuntu/app
-scp -i your-key.pem docker-compose.yml ubuntu@your-ec2-ip:/home/ubuntu/app/
-docker-compose up -d
-
-# Option B: Using deployment script
+# Using deployment script
 scp -i your-key.pem scripts/deploy.sh ubuntu@your-ec2-ip:/home/ubuntu/
 ssh -i your-key.pem ubuntu@your-ec2-ip 'bash /home/ubuntu/deploy.sh'
 ```
@@ -172,18 +131,17 @@ ssh -i your-key.pem ubuntu@your-ec2-ip 'bash /home/ubuntu/deploy.sh'
 ```bash
 # For RDS PostgreSQL (recommended for production)
 # 1. Create RDS instance via AWS Console
-# 2. Update environment variables in docker-compose or EC2:
+# 2. Update environment variables in EC2:
 
 export SPRING_DATASOURCE_URL=jdbc:postgresql://rds-endpoint:5432/comp4442_db
 export SPRING_DATASOURCE_USERNAME=your-db-user
 export SPRING_DATASOURCE_PASSWORD=your-db-password
 
 # Restart application
-docker-compose down
-docker-compose up -d
+sudo systemctl restart comp4442.service
 ```
 
-### 8. Git Workflow
+### 7. Git Workflow
 
 #### Create feature branch
 ```bash
@@ -211,7 +169,7 @@ git merge feature/your-feature-name
 git push origin main
 ```
 
-### 9. Testing
+### 8. Testing
 
 ```bash
 # Run all tests
@@ -227,7 +185,7 @@ mvn test jacoco:report
 open target/site/jacoco/index.html
 ```
 
-### 10. Troubleshooting
+### 9. Troubleshooting
 
 #### Port Already in Use
 ```bash
@@ -242,18 +200,12 @@ kill -9 <PID>
 
 #### Database Connection Issues
 ```bash
-# For Docker Postgres
-docker exec -it comp4442-postgres psql -U comp4442_user -d comp4442_db
-
-# Check connection
-docker network inspect comp4442-network
+# Verify database credentials in application.properties or environment variables
+# Check H2 console access when running in dev profile
 ```
 
 #### Application Won't Start
 ```bash
-# View logs
-docker logs comp4442-backend
-
 # Check Maven build
 mvn clean compile
 
@@ -269,7 +221,7 @@ export JAVA_OPTS="-Xmx1g -Xms512m"
 ./scripts/start-dev.sh
 ```
 
-### 11. Development Tips
+### 10. Development Tips
 
 **Avoid Common Mistakes:**
 - ✅ Always create feature branches
@@ -289,7 +241,7 @@ export JAVA_OPTS="-Xmx1g -Xms512m"
 - Monitor logs for errors
 - Keep dependencies updated
 
-### 12. Performance Optimization
+### 11. Performance Optimization
 
 ```bash
 # Monitor application
@@ -308,7 +260,6 @@ export LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL_BASICBINDER=TRACE
 ## Additional Resources
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Docker Documentation](https://docs.docker.com/)
 - [AWS EC2 Guide](https://docs.aws.amazon.com/ec2/)
 - [Maven Documentation](https://maven.apache.org/guides/)
 - [Git Handbook](https://git-scm.com/book)
