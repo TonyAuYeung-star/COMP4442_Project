@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 const USER_KEY = 'comp4442_user'
 const ROOM_TYPES = ['Standard', 'Deluxe', 'Suite', 'Presidential']
 const ROOM_CAPACITIES = [1, 2, 3, 4, 5, 6]
