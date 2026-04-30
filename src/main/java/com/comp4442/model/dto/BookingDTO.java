@@ -39,4 +39,5 @@ public class BookingDTO implements Serializable {
     private Integer payLaterCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String paymentReferenceId;
 }

@@ -61,7 +61,7 @@ public class DataLoader implements CommandLineRunner {
             standard1.setPricePerNight(new BigDecimal("89.00"));
             standard1.setIsAvailable(true);
             standard1.setAmenities("Wi-Fi, TV, Air Conditioning, Mini Fridge");
-            standard1.setImageUrl("https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800");
+            standard1.setImageUrl("https://www.hotel-beauvoir.fr/wp-content/uploads/sites/511/2022/12/Twin.jpg?w=800");
             standard1.setCreatedAt(LocalDateTime.now());
             standard1.setUpdatedAt(LocalDateTime.now());
 
@@ -72,7 +72,7 @@ public class DataLoader implements CommandLineRunner {
             standard2.setPricePerNight(new BigDecimal("99.00"));
             standard2.setIsAvailable(true);
             standard2.setAmenities("Wi-Fi, TV, Air Conditioning, Work Desk");
-            standard2.setImageUrl("https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800");
+            standard2.setImageUrl("https://cdn.prod.website-files.com/6734f4c085d0e288c5dc9b10/679bdcfaca14762ae01f894c_Landing%20Standard%20Queen-min.png?w=800");
             standard2.setCreatedAt(LocalDateTime.now());
             standard2.setUpdatedAt(LocalDateTime.now());
 
@@ -83,7 +83,7 @@ public class DataLoader implements CommandLineRunner {
             deluxe1.setPricePerNight(new BigDecimal("159.00"));
             deluxe1.setIsAvailable(true);
             deluxe1.setAmenities("Wi-Fi, TV, Air Conditioning, Balcony, Ocean View, Mini Bar");
-            deluxe1.setImageUrl("https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800");
+            deluxe1.setImageUrl("https://thumbs.dreamstime.com/b/luxury-hotel-room-ocean-view-modern-interior-design-377069206.jpg?w=800");
             deluxe1.setCreatedAt(LocalDateTime.now());
             deluxe1.setUpdatedAt(LocalDateTime.now());
 
@@ -94,7 +94,7 @@ public class DataLoader implements CommandLineRunner {
             deluxe2.setPricePerNight(new BigDecimal("189.00"));
             deluxe2.setIsAvailable(true);
             deluxe2.setAmenities("Wi-Fi, TV, Air Conditioning, Sofa Bed, Bathtub, City View");
-            deluxe2.setImageUrl("https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800");
+            deluxe2.setImageUrl("https://ngphaselisbay.com/media/pqbpklc0/ngp_themedeluxefamilyroomforest_ocean.jpg?w=800");
             deluxe2.setCreatedAt(LocalDateTime.now());
             deluxe2.setUpdatedAt(LocalDateTime.now());
 
@@ -105,7 +105,7 @@ public class DataLoader implements CommandLineRunner {
             suite1.setPricePerNight(new BigDecimal("299.00"));
             suite1.setIsAvailable(true);
             suite1.setAmenities("Wi-Fi, TV, Air Conditioning, Living Room, Kitchenette, Jacuzzi, Sea View");
-            suite1.setImageUrl("https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800");
+            suite1.setImageUrl("https://thelapishotel.com/wp-content/uploads/2024/12/Executive-Suite-the-lapis-hotel-hanoi-06.jpg?w=800");
             suite1.setCreatedAt(LocalDateTime.now());
             suite1.setUpdatedAt(LocalDateTime.now());
 
@@ -116,7 +116,7 @@ public class DataLoader implements CommandLineRunner {
             suite2.setPricePerNight(new BigDecimal("599.00"));
             suite2.setIsAvailable(true);
             suite2.setAmenities("Wi-Fi, TV, Air Conditioning, Living Room, Dining Room, Private Pool, Butler Service, Panoramic View");
-            suite2.setImageUrl("https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800");
+            suite2.setImageUrl("https://manilahotel.b-cdn.net/wp-content/uploads/2023/07/TMH_Presidential-Suite_Bedroom-1024x682.jpg?w=800");
             suite2.setCreatedAt(LocalDateTime.now());
             suite2.setUpdatedAt(LocalDateTime.now());
 

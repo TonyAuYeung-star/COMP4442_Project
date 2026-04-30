@@ -4,8 +4,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api
 const USER_KEY = 'comp4442_user'
 const ROOM_TYPES = ['Standard', 'Deluxe', 'Suite', 'Presidential']
 const ROOM_CAPACITIES = [1, 2, 3, 4, 5, 6]
-const PRICE_MIN = 0
-const PRICE_MAX = 700
 const PRICE_STEP = 10
 
 async function apiRequest(path, { method = 'GET', token, body } = {}) {
@@ -104,7 +102,7 @@ function validatePaymentForm({ expiryMonth, expiryYear, cvv }) {
 }
 
 function getRoomImageSrc(room) {
-  const fallback = 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'
+  const fallback = 'https://img.freepik.com/free-photo/small-hotel-room-interior-with-double-bed-bathroom_1262-12489.jpg?w=800'
   const imageUrl = room?.imageUrl?.trim()
   if (!imageUrl) return fallback
   const version = room?.updatedAt ? encodeURIComponent(room.updatedAt) : ''
@@ -129,6 +127,7 @@ function App() {
     cvv: '',
   })
   const [processingPayment, setProcessingPayment] = useState(false)
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState('')
 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
   const [registerForm, setRegisterForm] = useState({
@@ -140,8 +139,8 @@ function App() {
   const [roomSearch, setRoomSearch] = useState({
     type: '',
     capacity: '',
-    minPrice: String(PRICE_MIN),
-    maxPrice: String(PRICE_MAX),
+    minPrice: '0',
+    maxPrice: '700',
     checkIn: '',
     checkOut: '',
   })
@@ -181,6 +180,19 @@ function App() {
     () => (view === 'explore' ? rooms.filter((room) => room.isAvailable !== false) : rooms),
     [rooms, view],
   )
+
+  // Calculate dynamic price range based on actual room prices
+  const PRICE_MIN = useMemo(() => {
+    if (!rooms.length) return 0
+    return Math.floor(Math.min(...rooms.map(r => Number(r.pricePerNight || 0))) / PRICE_STEP) * PRICE_STEP
+  }, [rooms])
+
+  const PRICE_MAX = useMemo(() => {
+    if (!rooms.length) return 700
+    const maxRoomPrice = Math.max(...rooms.map(r => Number(r.pricePerNight || 0)))
+    // Round up to nearest PRICE_STEP and add extra buffer so highest price is selectable
+    return Math.ceil((maxRoomPrice + PRICE_STEP) / PRICE_STEP) * PRICE_STEP
+  }, [rooms])
 
   useEffect(() => {
     if (user) {
@@ -370,6 +382,33 @@ function App() {
     loadRooms()
   }
 
+  // Auto update search price range when dynamic min/max changes (new rooms added)
+  useEffect(() => {
+    setRoomSearch(prev => {
+      const currentMin = Number(prev.minPrice)
+      const currentMax = Number(prev.maxPrice)
+      
+      // Only update if current values are outside new range
+      let newMin = currentMin < PRICE_MIN ? String(PRICE_MIN) : prev.minPrice
+      let newMax = currentMax > PRICE_MAX ? String(PRICE_MAX) : prev.maxPrice
+      
+      // If range was at default max, expand it automatically
+      if (currentMax === 700 || currentMax === PRICE_MAX - PRICE_STEP) {
+        newMax = String(PRICE_MAX)
+      }
+      
+      if (newMin === prev.minPrice && newMax === prev.maxPrice) {
+        return prev
+      }
+      
+      return {
+        ...prev,
+        minPrice: newMin,
+        maxPrice: newMax
+      }
+    })
+  }, [PRICE_MIN, PRICE_MAX])
+
   async function checkAvailability() {
     if (!bookingDraft.roomId || !bookingDraft.checkIn || !bookingDraft.checkOut) {
       showBanner('error', 'Pick room and valid dates first.')
@@ -484,19 +523,35 @@ function App() {
   function closePaymentModal() {
     setPaymentModalBooking(null)
     setProcessingPayment(false)
+    setPaymentErrorMessage('')
   }
 
   async function submitPayment() {
     const booking = paymentModalBooking
     if (!user?.token || !booking) return
+    setPaymentErrorMessage('')
+
     const { cardNumber, expiryMonth, expiryYear, cvv } = paymentForm
     if (!cardNumber || !expiryMonth || !expiryYear || !cvv) {
-      showBanner('error', 'Please fill in all payment fields.')
+      setPaymentErrorMessage('Please fill in all payment fields.')
       return
     }
+
+    // Card number format validation
+    if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
+      setPaymentErrorMessage('Invalid card number format')
+      return
+    }
+
+    // CVV format validation
+    if (!/^\d{3,4}$/.test(cvv)) {
+      setPaymentErrorMessage('Invalid CVV format')
+      return
+    }
+
     const paymentValidationError = validatePaymentForm({ expiryMonth, expiryYear, cvv })
     if (paymentValidationError) {
-      showBanner('error', paymentValidationError)
+      setPaymentErrorMessage(paymentValidationError)
       return
     }
 
@@ -514,15 +569,18 @@ function App() {
         },
       })
       if (payment?.status === 'SUCCESS') {
-        showBanner('ok', `Payment successful. Reference: ${payment.paymentReferenceId}`)
+        // Generate unique reference number
+        const uniqueId = Math.random().toString(36).substring(2, 14).toUpperCase()
+        const paymentReference = `PAY-${uniqueId}`
+        showBanner('ok', `Payment successful. Reference: ${paymentReference}`)
         closePaymentModal()
         setView('bookings')
       } else {
-        showBanner('error', payment?.message || `Payment ${payment?.status || 'failed'}.`)
+        setPaymentErrorMessage(payment?.message || `Payment ${payment?.status || 'failed'}.`)
       }
       await loadBookings()
     } catch (error) {
-      showBanner('error', error.message)
+      setPaymentErrorMessage(error.message)
     } finally {
       setProcessingPayment(false)
     }
@@ -764,7 +822,7 @@ function App() {
                 <span>{toMoney(PRICE_MAX)}</span>
               </div>
             </div>
-            <input type="date" value={roomSearch.checkIn} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkIn: e.target.value }))} />
+            <input type="date" min={new Date().toISOString().split('T')[0]} value={roomSearch.checkIn} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkIn: e.target.value }))} />
             <input type="date" min={nextDay(roomSearch.checkIn)} value={roomSearch.checkOut} onChange={(e) => setRoomSearch((prev) => ({ ...prev, checkOut: e.target.value }))} />
             <div className="row-actions">
               <button type="submit" disabled={loading}>Search</button>
@@ -784,7 +842,7 @@ function App() {
                 <option key={room.id} value={room.id}>{room.name} ({toMoney(room.pricePerNight)})</option>
               ))}
             </select>
-            <input type="date" value={bookingDraft.checkIn} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkIn: e.target.value, checkOut: prev.checkOut && new Date(prev.checkOut) <= new Date(e.target.value) ? '' : prev.checkOut }))} required />
+            <input type="date" min={new Date().toISOString().split('T')[0]} value={bookingDraft.checkIn} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkIn: e.target.value, checkOut: prev.checkOut && new Date(prev.checkOut) <= new Date(e.target.value) ? '' : prev.checkOut }))} required />
             <input type="date" min={nextDay(bookingDraft.checkIn)} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft((prev) => ({ ...prev, checkOut: e.target.value }))} required />
             <div className="row-actions">
               <button type="button" className="secondary" onClick={checkAvailability}>Check</button>
@@ -812,7 +870,7 @@ function App() {
                       src={getRoomImageSrc(room)}
                       alt={room.name}
                       onError={(event) => {
-                        event.currentTarget.src = 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800'
+                        event.currentTarget.src = 'https://img.freepik.com/free-photo/small-hotel-room-interior-with-double-bed-bathroom_1262-12489.jpg?w=800'
                       }}
                     />
                     <div>
@@ -871,6 +929,9 @@ function App() {
                           <p>Status: <strong>{booking.status}</strong></p>
                           {booking.status === 'PENDING_PAYMENT' && booking.expiresAt && (
                             <p>Payment expires in: <strong>{formatRemainingTime(booking.expiresAt, nowMs)}</strong></p>
+                          )}
+                          {booking.status === 'CONFIRMED' && booking.paymentReferenceId && (
+                            <p>Reference Number: <strong>{booking.paymentReferenceId}</strong></p>
                           )}
                           {booking.status === 'CANCELLED' && booking.cancellationSource && (
                             <p>Cancelled by: <strong>{booking.cancellationSource === 'USER' ? 'You' : 'Administrator'}</strong></p>
@@ -973,6 +1034,9 @@ function App() {
                       <p>User: {booking.username}</p>
                       <p>{booking.checkIn} to {booking.checkOut}</p>
                           <p>Total: {toMoney(booking.totalPrice)} | Status: {booking.status}</p>
+                          {booking.status === 'CONFIRMED' && booking.paymentReferenceId && (
+                            <p>Reference Number: <strong>{booking.paymentReferenceId}</strong></p>
+                          )}
                           {booking.status === 'CANCELLED' && booking.cancellationSource && (
                             <p>Cancelled by: <strong>{booking.cancellationSource === 'USER' ? 'User' : 'Administrator'}</strong></p>
                           )}
@@ -1039,11 +1103,48 @@ function App() {
       </main>
 
       {paymentModalBooking && (
-        <div className="payment-modal-backdrop" onClick={closePaymentModal}>
-          <div className="payment-modal-card" onClick={(event) => event.stopPropagation()}>
+        <div className="payment-modal-backdrop" onClick={closePaymentModal} style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="payment-modal-card" onClick={(event) => event.stopPropagation()} style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '28px',
+            width: '100%',
+            maxWidth: '460px',
+            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.3)',
+            animation: 'modalSlideIn 0.3s ease-out'
+          }}>
             <h3>Payment</h3>
             <p><strong>{paymentModalBooking.roomName || 'Room Booking'}</strong></p>
             <p>{paymentModalBooking.checkIn} to {paymentModalBooking.checkOut} | {toMoney(paymentModalBooking.totalPrice)}</p>
+
+            {paymentErrorMessage && (
+              <div className="payment-error" style={{
+                background: '#ffebee',
+                border: '1px solid #ef5350',
+                borderRadius: '6px',
+                padding: '12px 16px',
+                margin: '12px 0',
+                color: '#c62828',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                ⚠️ {paymentErrorMessage}
+              </div>
+            )}
 
             <label>Card Number</label>
             <input

@@ -22,6 +22,7 @@ import com.comp4442.model.entity.CancellationSource;
 import com.comp4442.model.entity.Room;
 import com.comp4442.model.entity.User;
 import com.comp4442.repository.BookingRepository;
+import com.comp4442.repository.PaymentRepository;
 import com.comp4442.repository.RoomRepository;
 import com.comp4442.repository.UserRepository;
 
@@ -40,6 +41,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public synchronized BookingDTO createBooking(Long userId, BookingCreateRequest request) {
@@ -210,6 +212,9 @@ public class BookingService {
                 .payLaterCount(booking.getPayLaterCount() == null ? 0 : booking.getPayLaterCount())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())
+                .paymentReferenceId(paymentRepository.findByBookingId(booking.getId())
+                        .map(payment -> payment.getPaymentReferenceId())
+                        .orElse(null))
                 .build();
     }
 
