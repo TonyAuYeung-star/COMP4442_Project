@@ -4,7 +4,7 @@
 
 A production-ready **Hotel Room Booking System** built with Spring Boot Backend and React Frontend, deployed on **AWS EC2**. This project implements complete service computing architecture including JWT authentication, booking management and payment processing.
 
-**Course:** COMP4442 - Service Computing
+**Course:** COMP4442 - SERVICE AND CLOUD COMPUTING
 **Type:** Semester Group Project
 **Deployment Platform:** AWS EC2
 
