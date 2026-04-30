@@ -5,32 +5,46 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 echo "=== COMP4442 EC2 初始化開始 ==="
 
 # 1. 更新系統
-apt-get update -y
-apt-get upgrade -y
+sudo yum update -y
 
 # 2. 安裝 Java 17
-apt-get install openjdk-17-jdk -y
+sudo amazon-linux-extras install java17 -y
 
 # 3. 安裝 Maven
-apt-get install maven -y
+sudo yum install maven -y
 
 # 4. 安裝 Git
-apt-get install git -y
+sudo yum install git -y
 
-# 5. 建立專案資料夾
-mkdir -p /home/ubuntu/comp4442-app
-mkdir -p /home/ubuntu/comp4442-app/logs
-chown -R ubuntu:ubuntu /home/ubuntu/comp4442-app
+# 5. 安裝 Nginx (for frontend)
+sudo amazon-linux-extras install nginx1 -y
 
-# 6. 複製專案檔案 (如果已上傳) 或使用 git clone
-# git clone https://github.com/your-repo/comp4442-project.git /home/ubuntu/comp4442-app
+# 6. 建立專案資料夾
+mkdir -p /home/ec2-user/comp4442-app
+mkdir -p /home/ec2-user/comp4442-app/logs
+chown -R ec2-user:ec2-user /home/ec2-user/comp4442-app
 
-# 7. 建置應用程式
-cd /home/ubuntu/comp4442-app
+# 7. 複製專案檔案 - 請修改為你的 GitHub repo URL
+# 取消下面的註釋並設定你的 repo URL
+cd /home/ec2-user/comp4442-app
+git clone https://github.com/TonyAuYeung-star/COMP4442_Project.git
+
+# 8. 建置應用程式
+cd /home/ec2-user/comp4442-app
 mvn clean package -DskipTests
 
-# 8. 啟動應用程式
+# 9. 複製靜態資源到 Nginx 目錄
+sudo cp -r src/main/resources/static/* /usr/share/nginx/html/
+sudo cp -r frontend/dist/* /usr/share/nginx/html/
+
+# 10. 啟動 Nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# 11. 啟動 Spring Boot 應用程式
+cd /home/ec2-user/comp4442-app
 nohup java -jar target/service-computing-backend-1.0.0.jar > logs/app.log 2>&1 &
 
-echo "=== EC2 初始化完成！應用程式已啟動 ==="
-echo "應用程式運行在 http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8080/api"
+echo "=== EC2 初始化完成！ ==="
+echo "Backend API: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8080/api"
+echo "Frontend: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)/"
